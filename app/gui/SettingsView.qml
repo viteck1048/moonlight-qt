@@ -1,4 +1,6 @@
-import QtQuick 2.9
+pragma ComponentBehavior: Bound
+
+import QtQuick 2.9          //new
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.2
 import QtQuick.Window 2.2
@@ -7,17 +9,273 @@ import StreamingPreferences 1.0
 import ComputerManager 1.0
 import SdlGamepadKeyNavigation 1.0
 import SystemProperties 1.0
+import UserKeyComboBridge 1.0
 
 Flickable {
     id: settingsPage
     objectName: qsTr("Settings")
 
+    //readonly property var keymapBridge: UserKeyComboBridge
+    property bool keymapEditorActive: false
+    property var keymapCombos: []
+    property var modifierOptions: []
+    property string keymapEditorStatus: ""
+    property bool suppressAutoScroll: false
+
+    readonly property real standardContentWidth: Math.max(settingsColumn1.width, settingsColumn2.width)
+    readonly property real standardContentHeight: Math.max(settingsColumn1.height, settingsColumn2.height)
+
     signal languageChanged()
+
+    function cloneCombos(source) {
+        return source ? JSON.parse(JSON.stringify(source)) : []
+    }
+
+    function loadKeymapCombos() {
+        //ensureModifierOptions()
+        keymapCombos = cloneCombos(keymapBridge.loadCombos())
+        
+        // If no combos exist, create a default test combo to enable "Detect Scancode"
+        if (keymapCombos.length === 0) {
+            var defaultCombo = {
+                "input": {
+                    "scancode": "",
+                    "modifiers": []
+                },
+                "outputs": [
+                    {
+                        "scancode": "",
+                        "modifiers": []
+                    }
+                ],
+                "description": "New custom hotkey"
+            }
+            keymapCombos.push(defaultCombo)
+        }
+    }
+
+    function showKeymapEditor() {
+        // Reload combos from backend to ensure fresh data
+        if (keymapBridge.reloadCombos()) {
+            loadKeymapCombos()
+        }
+        keymapEditorStatus = ""
+        keymapEditorActive = true
+    }
+
+    function showStandardSettings() {
+        keymapEditorActive = false
+    }
+
+    function handleBackNavigation() {
+        if (keymapEditorActive) {
+            showStandardSettings()
+            return true
+        }
+
+        return false
+    }
+
+    function comboKeyData(comboIndex, keyType, outputIndex) {
+        var combo = keymapCombos[comboIndex]
+        if (!combo) {
+            return null
+        }
+
+        if (keyType === "input") {
+            return combo.input || null
+        }
+
+        if (!combo.outputs) {
+            return null
+        }
+        return combo.outputs[outputIndex] || null
+    }
+
+    function comboKeyTokenString(comboIndex, keyType, outputIndex) {
+        var keySpec = comboKeyData(comboIndex, keyType, outputIndex)
+        if (!keySpec) {
+            return ""
+        }
+
+        var tokens = []
+        if (keySpec.modifiers && keySpec.modifiers.length > 0) {
+            keySpec.modifiers.forEach(function(token) {
+                if (token && token.length > 0) {
+                    tokens.push(token)
+                }
+            })
+        }
+        if (keySpec.scancode && keySpec.scancode.length > 0) {
+            tokens.push(keySpec.scancode)
+        }
+        return tokens.join("+")
+    }
+
+    function parseBindingText(text) {
+        var result = {
+            scancode: "",
+            modifiers: []
+        }
+
+        if (!text) {
+            return result
+        }
+
+        var parts = text.split("+")
+        parts.forEach(function(part) {
+            var token = part.trim()
+            if (!token) {
+                return
+            }
+
+            if (token.indexOf("KMOD_") === 0) {
+                if (result.modifiers.indexOf(token) === -1) {
+                    result.modifiers.push(token)
+                }
+            }
+            else {
+                result.scancode = token
+            }
+        })
+
+        return result
+    }
+
+    function updateCombos(mutator) {
+        var clone = cloneCombos(keymapCombos)
+        mutator(clone)
+        keymapCombos = clone
+    }
+
+    function ensureComboKey(combos, comboIndex, keyType, outputIndex) {
+        var combo = combos[comboIndex]
+        if (!combo) {
+            return null
+        }
+
+        if (keyType === "input") {
+            combo.input = combo.input || keymapBridge.emptyKeySpec()
+            combo.input.modifiers = combo.input.modifiers || []
+            return combo.input
+        }
+
+        combo.outputs = combo.outputs || []
+        if (keyType === "output" && outputIndex >= 0 && outputIndex < combo.outputs.length) {
+            combo.outputs[outputIndex] = combo.outputs[outputIndex] || keymapBridge.emptyKeySpec()
+            combo.outputs[outputIndex].modifiers = combo.outputs[outputIndex].modifiers || []
+            return combo.outputs[outputIndex]
+        }
+
+        return null
+    }
+
+    function setComboDescription(comboIndex, value) {
+        updateCombos(function(clone) {
+            if (clone[comboIndex]) {
+                clone[comboIndex].description = value
+            }
+        })
+    }
+
+    function setComboKeyText(comboIndex, keyType, outputIndex, text) {
+        var parsed = parseBindingText(text)
+        updateCombos(function(clone) {
+            var keySpec = ensureComboKey(clone, comboIndex, keyType, outputIndex)
+            if (!keySpec) {
+                return
+            }
+            keySpec.scancode = parsed.scancode
+            keySpec.modifiers = parsed.modifiers
+        })
+    }
+
+    function addCombo() {
+        updateCombos(function(clone) {
+            clone.push(keymapBridge.emptyCombo())
+        })
+    }
+
+    function removeCombo(comboIndex) {
+        updateCombos(function(clone) {
+            clone.splice(comboIndex, 1)
+        })
+    }
+
+    function addComboOutput(comboIndex) {
+        updateCombos(function(clone) {
+            var combo = clone[comboIndex]
+            if (!combo) {
+                return
+            }
+            combo.outputs = combo.outputs || []
+            combo.outputs.push(keymapBridge.emptyKeySpec())
+        })
+    }
+
+    function removeComboOutput(comboIndex, outputIndex) {
+        updateCombos(function(clone) {
+            var combo = clone[comboIndex]
+            if (!combo || !combo.outputs) {
+                return
+            }
+            combo.outputs.splice(outputIndex, 1)
+        })
+    }
+
+    function reloadKeymapCombos() {
+        if (keymapBridge.reloadCombos()) {
+            loadKeymapCombos()
+            keymapEditorStatus = qsTr("Combos reloaded")
+        }
+        else {
+            keymapEditorStatus = qsTr("Reload failed")
+        }
+    }
+
+    function saveKeymapCombos() {
+        if (keymapBridge.saveCombos(keymapCombos)) {
+            keymapEditorStatus = qsTr("Combos saved")
+        }
+        else {
+            keymapEditorStatus = qsTr("Save failed")
+        }
+    }
+
+    UserKeyComboBridge {
+        id: keymapBridge
+        
+        onKeyCaptured: {
+            // Handle the captured key data
+            if (keyData && keyData.length > 0) {
+                var keyInfo = keyData[0]
+                if (keyInfo && keyInfo.scancode) {
+                    inputScancodeField.text = keyInfo.scancode
+                    inputScancodeField.detectMode = false
+                    setBindingScancode(comboIndex, "input", -1, keyInfo.scancode)
+                    
+                    // Update modifiers if they were captured
+                    if (keyInfo.modifiers && keyInfo.modifiers.length > 0) {
+                        // Set the first modifier (simplified for now)
+                        var modifierToken = keyInfo.modifiers[0]
+                        // Find the modifier index and set it
+                        for (var i = 0; i < modifierOptions.length; i++) {
+                            if (modifierOptions[i] === modifierToken) {
+                                // This would need to update the appropriate ComboBox
+                                // For now, we'll just store the modifier data
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     boundsBehavior: Flickable.OvershootBounds
 
-    contentWidth: settingsColumn1.width > settingsColumn2.width ? settingsColumn1.width : settingsColumn2.width
-    contentHeight: settingsColumn1.height > settingsColumn2.height ? settingsColumn1.height : settingsColumn2.height
+    contentWidth: keymapEditorActive ? keymapEditorContainer.width : standardContentWidth
+    contentHeight: keymapEditorActive ? keymapEditorContainer.height : standardContentHeight
 
     ScrollBar.vertical: ScrollBar {
         anchors {
@@ -43,6 +301,10 @@ Flickable {
     }
 
     Window.onActiveFocusItemChanged: {
+        if (settingsPage.suppressAutoScroll) {
+            settingsPage.suppressAutoScroll = false
+            return
+        }
         var item = Window.activeFocusItem
         if (item) {
             // Ignore non-child elements like the toolbar buttons
@@ -98,6 +360,7 @@ Flickable {
         id: settingsColumn1
         width: settingsPage.width / 2
         spacing: 15
+        visible: !settingsPage.keymapEditorActive
 
         GroupBox {
             id: basicSettingsGroupBox
@@ -1290,6 +1553,7 @@ Flickable {
         id: settingsColumn2
         width: settingsPage.width / 2
         spacing: 15
+        visible: !settingsPage.keymapEditorActive
 
         GroupBox {
             id: inputSettingsGroupBox
@@ -1319,6 +1583,57 @@ Flickable {
                     ToolTip.text: qsTr("This enables seamless mouse control without capturing the client's mouse cursor. It is ideal for remote desktop usage but will not work in most games.") + " " +
                                   qsTr("You can toggle this while streaming using Ctrl+Alt+Shift+M.") + "\n\n" +
                                   qsTr("NOTE: Due to a bug in GeForce Experience, this option may not work properly if your host PC has multiple monitors.")
+                }
+
+                CheckBox {
+                    id: pointerRegionLockCheck
+                    hoverEnabled: true
+                    width: parent.width
+                    text: qsTr("Lock pointer inside video region when capturing input")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.pointerRegionLockActive
+                    onCheckedChanged: StreamingPreferences.pointerRegionLockActive = checked
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 10000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Prevents the local mouse cursor from leaving the streaming window while Moonlight has captured input.") + "\n\n" +
+                                  qsTr("You can toggle this while streaming using Ctrl+Alt+Shift+L.")
+                }
+
+                RowLayout {
+                    spacing: 5
+                    width: parent.width
+
+                    CheckBox {
+                        id: userCombosEnabledCheck
+                        hoverEnabled: true
+                        Layout.fillWidth: true
+                        text: qsTr("Enable custom keyboard combos from keymap.xml")
+                        font.pointSize: 12
+                        checked: StreamingPreferences.userCombosEnabled
+                        onCheckedChanged: StreamingPreferences.userCombosEnabled = checked
+
+                        ToolTip.delay: 1000
+                        ToolTip.timeout: 10000
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Allows Moonlight to intercept configured key combinations and substitute custom outputs defined in keymap.xml.") + "\n\n" +
+                                    qsTr("You can toggle this while streaming using Ctrl+Alt+Shift+U.")
+                    }
+
+                    Button {
+                        id: keymapSettingsToggle
+                        text: settingsPage.keymapEditorActive ? qsTr("Hide custom hotkeys") : qsTr("Custom hotkeys")
+                        font.pointSize: 12
+                        onClicked: settingsPage.keymapEditorActive ? settingsPage.showStandardSettings() : settingsPage.showKeymapEditor()
+
+                        ToolTip.delay: 800
+                        ToolTip.timeout: 6000
+                        ToolTip.visible: hovered
+                        ToolTip.text: settingsPage.keymapEditorActive ?
+                                      qsTr("Return to streaming input settings") :
+                                      qsTr("Open keymap configuration view")
+                    }
                 }
 
                 Row {
@@ -1751,6 +2066,315 @@ Flickable {
                                   qsTr("You can toggle it at any time while streaming using Ctrl+Alt+Shift+S or Select+L1+R1+X.") + "\n\n" +
                                   qsTr("The performance overlay is not supported on Steam Link or Raspberry Pi.")
                 }
+            }
+        }
+    }
+
+    Item {
+        id: keymapEditorContainer
+        visible: settingsPage.keymapEditorActive
+        width: settingsPage.width - 20
+        height: keymapEditorContent.implicitHeight
+        implicitHeight: keymapEditorContent.implicitHeight
+
+        Column {
+            id: keymapEditorContent
+            width: parent.width
+            
+            spacing: 16
+            padding: 12
+
+            Rectangle {
+                width: parent.width
+                implicitHeight: 750
+                color: "#202020"
+                radius: 6
+                border.color: "#3a3a3a"
+                border.width: 1
+
+                Row {
+                    width: parent.width
+                    height: parent.height
+                    spacing: 10
+                    anchors.margins: 10
+
+                    // Left side - Static instructions
+                    Rectangle {
+                        width: parent.width * 0.4
+                        height: parent.height
+                        color: '#2a2a2a'
+                        border.color: '#444444'
+                        border.width: 1
+                        radius: 4
+
+                        Column {
+                            width: parent.width - 20
+                            anchors.centerIn: parent
+                            spacing: 8
+
+                            Label {
+                                text: qsTr("Built-in keyboard shortcuts")
+                                font.bold: true
+                                font.pointSize: 10
+                            }
+                            /*
+                            // View intermediate array as a JSON in the instructions window
+                            Text {
+                                color: '#c09898'
+                                width: parent.width
+                                text: JSON.stringify(keymapCombos)
+                                wrapMode: Text.WordWrap
+                                font.pointSize: 9
+                            }/*/
+                            Text {
+                                color: '#c09898'
+                                width: parent.width
+                                text: qsTr("Ctrl + Alt + Shift + Q\nQuit streaming session (game keeps running on host)\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + Z\nToggle mouse/keyboard capture\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + X\nToggle fullscreen/windowed\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + S\nShow performance overlay (unsupported on Steam Link or Raspberry Pi)\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + M\nToggle mouse mode (capture vs. direct) - deactivates custom remaps\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + V\nPaste clipboard text on host\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + D\nMinimize stream window\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + C\nToggle local cursor visibility in desktop mouse mode\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + L\nToggle pointer lock to video region (requires desktop mouse mode enabled)\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + U\nEnable/disable custom key remaps\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + F1-F9\nSwitch displays on host\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + P\nDeclare how many displays are attached on the host\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + N\nCycle to the next declared display (simulates the matching F-key)\n\n") +
+                                      qsTr("Note: Switching to game mode with Ctrl+Alt+Shift+M disables custom remaps (+U) and enables pointer lock (+L).\n\n") +
+                                      qsTr("These shortcuts are hard-coded on client and host. Enter a replacement in the 'Input' fields below and provide desired outputs in 'Out' to override them.")
+                                wrapMode: Text.WordWrap
+                                font.pointSize: 9
+                            }//*/
+                        }
+                    }
+
+                    // Right side - Dynamic combos
+                    ScrollView {
+                        width: parent.width * 0.6
+                        height: parent.height
+                        clip: true
+
+                        Column {
+                            id: keymapCombosColumn
+                            width: parent.width
+                            spacing: 12
+
+                            Repeater {
+                                model: keymapCombos
+
+                                delegate: Column {
+                                    width: parent.width
+                                    spacing: 8
+
+                                    required property int index
+                                    required property var modelData
+
+                                    property var comboData: modelData
+                                    property int comboIndex: index
+
+                                    Rectangle {
+                                        width: parent.width
+                                        height: 1
+                                        color: "#444444"
+                                    }
+
+                                    Row {
+                                        width: parent.width - 50
+                                        spacing: 10
+
+                                        Label {
+                                            text: qsTr("Combo #%1").arg(comboIndex + 1)
+                                            font.bold: true
+                                            font.pointSize: 11
+                                        }
+
+                                        CheckBox {
+                                            text: qsTr("Auto-detect mode")
+                                            checked: comboData ? (comboData.autoDetectMode !== undefined ? comboData.autoDetectMode : true) : true
+                                            onCheckedChanged: {
+                                                updateCombos(function(clone) {
+                                                    if (clone[comboIndex]) {
+                                                        clone[comboIndex].autoDetectMode = checked
+                                                    }
+                                                })
+                                            }
+                                        }
+                                    }
+
+                                    Row {
+                                        width: parent.width - 50
+                                        spacing: 10
+
+                                        Label {
+                                            text: qsTr("Description:")
+                                            width: 100
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+
+                                        TextField {
+                                            id: descriptionField
+                                            width: parent.width - 100 - 10
+                                            text: comboData ? (comboData.description || "") : ""
+                                            placeholderText: qsTr("e.g., My custom hotkey")
+                                            
+                                            onFocusChanged: {
+                                                if (!focus) {
+                                                    setComboDescription(comboIndex, text)
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Row {
+                                        width: parent.width - 50
+                                        spacing: 10
+
+                                        Label {
+                                            text: qsTr("Input:")
+                                            width: 100
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+
+                                        TextField {
+                                            id: inputKeyField
+                                            width: parent.width - 100 - 10
+                                            text: comboData ? comboKeyTokenString(comboIndex, "input", -1) : ""
+                                            placeholderText: qsTr("e.g., KMOD_CTRL+KMOD_ALT+SDL_SCANCODE_P")
+                                            readOnly: comboData ? (comboData.autoDetectMode || false) : false
+                                            
+                                            Keys.onPressed: {
+                                                if (comboData && comboData.autoDetectMode) {
+                                                    event.accepted = true
+                                                    var tokenString = keymapBridge.keyEventToTokens(event.nativeScanCode, event.modifiers)
+                                                    if (tokenString && tokenString.length > 0) {
+                                                        text = tokenString
+                                                    }
+                                                    inputKeyField.forceActiveFocus()
+                                                }
+                                            }
+                                            
+                                            onFocusChanged: {
+                                                if (!focus) {
+                                                    setComboKeyText(comboIndex, "input", -1, text)
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Label {
+                                        text: qsTr("Outputs:")
+                                        font.bold: true
+                                        font.pointSize: 10
+                                    }
+
+                                    Column {
+                                        width: parent.width - 50
+                                        spacing: 6
+
+                                        Repeater {
+                                            model: comboData ? (comboData.outputs ? comboData.outputs.length : 0) : 0
+
+                                            delegate: Row {
+                                                width: parent.width
+                                                spacing: 10
+
+                                                required property int index
+                                                required property var modelData
+
+                                                property int outputIndex: index
+
+                                                Label {
+                                                    text: qsTr("Output %1:").arg(outputIndex + 1)
+                                                    width: 100
+                                                    verticalAlignment: Text.AlignVCenter
+                                                }
+
+                                                TextField {
+                                                    id: outputKeyField
+                                                    width: parent.width - 100 - 10 - 50
+                                                    text: comboKeyTokenString(comboIndex, "output", outputIndex)
+                                                    placeholderText: qsTr("e.g., KMOD_CTRL+KMOD_ALT+SDL_SCANCODE_Q")
+                                                    readOnly: comboData ? (comboData.autoDetectMode || false) : false
+                                                    
+                                                    Keys.onPressed: {
+                                                        if (comboData && comboData.autoDetectMode) {
+                                                            event.accepted = true
+                                                            var tokenString = keymapBridge.keyEventToTokens(event.nativeScanCode, event.modifiers)
+                                                            if (tokenString && tokenString.length > 0) {
+                                                                text = tokenString
+                                                            }
+                                                            outputKeyField.forceActiveFocus()
+                                                        }
+                                                    }
+                                                    
+                                                    onFocusChanged: {
+                                                        if (!focus) {
+                                                            setComboKeyText(comboIndex, "output", outputIndex, text)
+                                                        }
+                                                    }
+                                                }
+
+                                                Button {
+                                                    text: qsTr("Remove")
+                                                    width: 50
+                                                    onClicked: removeComboOutput(comboIndex, outputIndex)
+                                                }
+                                            }
+                                        }
+
+                                        Button {
+                                            text: qsTr("Add output")
+                                            width: 100
+                                            onClicked: addComboOutput(comboIndex)
+                                        }
+                                    }
+
+                                    Row {
+                                        width: 100
+                                        spacing: 10
+
+                                        Button {
+                                            text: qsTr("Remove combo")
+                                            onClicked: removeCombo(comboIndex)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Row {
+                spacing: 10
+                width: parent.width
+                Button {
+                    text: qsTr("Add combo")
+                    onClicked: addCombo()
+                }
+                Button {
+                    text: qsTr("Reload")
+                    onClicked: reloadKeymapCombos()
+                }
+                Button {
+                    text: qsTr("Save")
+                    onClicked: saveKeymapCombos()
+                }
+                Label {
+                    text: keymapEditorStatus
+                    font.pointSize: 11
+                    color: keymapEditorStatus.indexOf("failed") >= 0 ? "#e57373" : "#a5d6a7"
+                }
+            }
+
+            Label {
+                width: parent.width
+                text: qsTr("keymap.xml path: %1").arg(keymapBridge.keymapPath())
+                font.pointSize: 10
+                color: "#aaaaaa"
+                wrapMode: Text.Wrap
             }
         }
     }

@@ -125,7 +125,7 @@ Session* ComputerModel::createSessionForCurrentGame(int computerIndex)
 
     for (NvApp& app : computer->appList) {
         if (app.id == computer->currentGameId) {
-            return new Session(computer, app);
+            return new Session(computer, app, nullptr, m_ComputerManager);
         }
     }
 

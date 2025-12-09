@@ -41,12 +41,15 @@
 #include "utils.h"
 #include "gui/computermodel.h"
 #include "gui/appmodel.h"
+#include "gui/userkeycombobridge.h"
 #include "backend/autoupdatechecker.h"
 #include "backend/computermanager.h"
 #include "backend/systemproperties.h"
 #include "streaming/session.h"
 #include "settings/streamingpreferences.h"
 #include "gui/sdlgamepadkeynavigation.h"
+#include "streaming/input/userkeycombos.h"
+#include "streaming/input/keyboardmapping.h"
 
 #if defined(Q_OS_WIN32)
 #define IS_UNSPECIFIED_HANDLE(x) ((x) == INVALID_HANDLE_VALUE || (x) == NULL)
@@ -638,6 +641,9 @@ int main(int argc, char *argv[])
                 "Running with SDL %d.%d.%d",
                 runtimeVersion.major, runtimeVersion.minor, runtimeVersion.patch);
 
+    LikeSdlScancodeMapper::instance().initialize();
+    UserKeyComboManager::instance().initialize();
+    
     // Apply the initial translation based on user preference
     StreamingPreferences::get()->retranslate();
 
@@ -727,6 +733,9 @@ int main(int argc, char *argv[])
                                                    [](QQmlEngine* qmlEngine, QJSEngine*) -> QObject* {
                                                        return StreamingPreferences::get(qmlEngine);
                                                    });
+    
+    
+    qmlRegisterType<UserKeyComboBridge>("UserKeyComboBridge", 1, 0, "UserKeyComboBridge");
 
     // Create the identity manager on the main thread
     IdentityManager::get();

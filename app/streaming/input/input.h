@@ -2,8 +2,13 @@
 
 #include "settings/streamingpreferences.h"
 #include "backend/computermanager.h"
+#include "streaming/input/userkeycombos.h"
 
 #include "SDL_compat.h"
+
+#include <QVector>
+
+class QXmlStreamReader;
 
 struct GamepadState {
     SDL_GameController* controller;
@@ -84,7 +89,11 @@ struct DualSenseOutputReport{
 class SdlInputHandler
 {
 public:
-    explicit SdlInputHandler(StreamingPreferences& prefs, int streamWidth, int streamHeight);
+    explicit SdlInputHandler(StreamingPreferences& prefs,
+                             int streamWidth,
+                             int streamHeight,
+                             const QVector<UserKeyComboHx>& userCombos,
+                             int initialDisplayCount);
 
     ~SdlInputHandler();
 
@@ -146,6 +155,9 @@ public:
 
     void setCaptureActive(bool active);
 
+    void setUserComboEnabled(bool enabled);
+    bool userComboEnabled() const;
+
     bool isMouseInVideoRegion(int mouseX, int mouseY, int windowWidth = -1, int windowHeight = -1);
 
     void updateKeyboardGrabState();
@@ -156,6 +168,7 @@ public:
     QString getUnmappedGamepads();
 
 private:
+
     enum KeyCombo {
         KeyComboQuit,
         KeyComboUngrabInput,
@@ -166,7 +179,10 @@ private:
         KeyComboToggleMinimize,
         KeyComboPasteText,
         KeyComboTogglePointerRegionLock,
+        KeyComboToggleUserCombos,
         KeyComboQuitAndExit,
+        KeyComboSetDsplLen,
+        KeyComboNextDsplView,
         KeyComboMax
     };
 
@@ -187,6 +203,10 @@ private:
 
     void performSpecialKeyCombo(KeyCombo combo);
 
+    bool applyUserKeyCombo(SDL_KeyboardEvent* event);
+    bool matchUserKeyBinding(const UserKeyKShHx& binding, SDL_Scancode scancode, SDL_Keymod modifiers) const;
+    void playbackUserKeyCombo(const UserKeyComboHx& combo, SDL_Keymod input_modifiers);
+    
     static
     Uint32 longPressTimerCallback(Uint32 interval, void* param);
 
@@ -246,6 +266,12 @@ private:
     SDL_TimerID m_DragTimer;
     char m_DragButton;
     int m_NumFingersDown;
+
+    QVector<UserKeyComboHx> m_UserKeyCombos;
+    bool m_IsProcessingUserCombo;
+    bool m_UserCombosEnabled;
+    int dspl_view;
+    int dspl_len;
 
     static const int k_ButtonMap[];
 };

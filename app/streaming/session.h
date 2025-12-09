@@ -89,6 +89,8 @@ public:
     }
 };
 
+class ComputerManager;
+
 class Session : public QObject
 {
     Q_OBJECT
@@ -99,7 +101,7 @@ class Session : public QObject
     friend class ExecThread;
 
 public:
-    explicit Session(NvComputer* computer, NvApp& app, StreamingPreferences *preferences = nullptr);
+    explicit Session(NvComputer* computer, NvApp& app, StreamingPreferences *preferences = nullptr, ComputerManager* computerManager = nullptr);
     virtual ~Session();
 
     Q_INVOKABLE void exec(QWindow* qtWindow);
@@ -122,6 +124,8 @@ public:
     void flushWindowEvents();
 
     void setShouldExitAfterQuit();
+
+    void updateClientDisplayCount(int count);
 
 signals:
     void stageStarting(QString stage);
@@ -285,4 +289,6 @@ private:
     static CONNECTION_LISTENER_CALLBACKS k_ConnCallbacks;
     static Session* s_ActiveSession;
     static QSemaphore s_ActiveSessionSemaphore;
+
+    ComputerManager* m_ComputerManager;
 };

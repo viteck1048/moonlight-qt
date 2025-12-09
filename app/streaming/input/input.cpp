@@ -6,10 +6,17 @@
 #include "utils.h"
 
 #include <QtGlobal>
-#include <QDir>
 #include <QGuiApplication>
 
-SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, int streamHeight)
+namespace {
+static constexpr SDL_Keymod KMOD_VIRTUAL_EVENT = (SDL_Keymod)0x0020;
+}
+
+SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs,
+                                 int streamWidth,
+                                 int streamHeight,
+                                 const QVector<UserKeyComboHx>& userCombos,
+                                 int initialDisplayCount)
     : m_MultiController(prefs.multiController),
       m_GamepadMouse(prefs.gamepadMouse),
       m_SwapMouseButtons(prefs.swapMouseButtons),
@@ -17,8 +24,9 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
       m_SwapFaceButtons(prefs.swapFaceButtons),
       m_MouseWasInVideoRegion(false),
       m_PendingMouseButtonsAllUpOnVideoRegionLeave(false),
-      m_PointerRegionLockActive(false),
-      m_PointerRegionLockToggledByUser(false),
+      m_PointerRegionLockActive(prefs.pointerRegionLockActive),
+      m_PointerRegionLockToggledByUser(!prefs.pointerRegionLockActive),
+      //m_PointerRegionLockToggledByUser(true),
       m_FakeCaptureActive(false),
       m_CaptureSystemKeysMode(prefs.captureSysKeysMode),
       m_MouseCursorCapturedVisibilityState(SDL_DISABLE),
@@ -32,8 +40,14 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
       m_RightButtonReleaseTimer(0),
       m_DragTimer(0),
       m_DragButton(0),
-      m_NumFingersDown(0)
+      m_NumFingersDown(0),
+      m_IsProcessingUserCombo(false),
+      m_UserCombosEnabled(prefs.userCombosEnabled)
 {
+    m_UserKeyCombos = userCombos;
+    dspl_len = qBound(1, initialDisplayCount, 9);
+    dspl_view = 0;
+
     // System keys are always captured when running without a DE
     if (!WMUtils::isRunningDesktopEnvironment()) {
         m_CaptureSystemKeysMode = StreamingPreferences::CSK_ALWAYS;
@@ -111,10 +125,25 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
     m_SpecialKeyCombos[KeyComboTogglePointerRegionLock].scanCode = SDL_SCANCODE_L;
     m_SpecialKeyCombos[KeyComboTogglePointerRegionLock].enabled = true;
 
+    m_SpecialKeyCombos[KeyComboToggleUserCombos].keyCombo = KeyComboToggleUserCombos;
+    m_SpecialKeyCombos[KeyComboToggleUserCombos].keyCode = SDLK_u;
+    m_SpecialKeyCombos[KeyComboToggleUserCombos].scanCode = SDL_SCANCODE_U;
+    m_SpecialKeyCombos[KeyComboToggleUserCombos].enabled = true;
+
     m_SpecialKeyCombos[KeyComboQuitAndExit].keyCombo = KeyComboQuitAndExit;
     m_SpecialKeyCombos[KeyComboQuitAndExit].keyCode = SDLK_e;
     m_SpecialKeyCombos[KeyComboQuitAndExit].scanCode = SDL_SCANCODE_E;
     m_SpecialKeyCombos[KeyComboQuitAndExit].enabled = true;
+
+    m_SpecialKeyCombos[KeyComboSetDsplLen].keyCombo = KeyComboSetDsplLen;
+    m_SpecialKeyCombos[KeyComboSetDsplLen].keyCode = SDLK_p;
+    m_SpecialKeyCombos[KeyComboSetDsplLen].scanCode = SDL_SCANCODE_P;
+    m_SpecialKeyCombos[KeyComboSetDsplLen].enabled = true;
+
+    m_SpecialKeyCombos[KeyComboNextDsplView].keyCombo = KeyComboNextDsplView;
+    m_SpecialKeyCombos[KeyComboNextDsplView].keyCode = SDLK_n;
+    m_SpecialKeyCombos[KeyComboNextDsplView].scanCode = SDL_SCANCODE_N;
+    m_SpecialKeyCombos[KeyComboNextDsplView].enabled = true;
 
     m_OldIgnoreDevices = SDL_GetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES);
     m_OldIgnoreDevicesExcept = SDL_GetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT);
@@ -249,6 +278,205 @@ SdlInputHandler::~SdlInputHandler()
 void SdlInputHandler::setWindow(SDL_Window *window)
 {
     m_Window = window;
+}
+
+bool SdlInputHandler::matchUserKeyBinding(const UserKeyKShHx& binding, SDL_Scancode scancode, SDL_Keymod modifiers) const
+{
+    if (binding.scancode == SDL_SCANCODE_UNKNOWN || binding.scancode != scancode) {
+        return false;
+    }
+    
+    if((binding.modifiers & KMOD_CTRL) == KMOD_CTRL) {
+        if(modifiers & KMOD_CTRL) {
+            modifiers = (SDL_Keymod)(modifiers | KMOD_CTRL);
+        }
+    }
+    if((binding.modifiers & KMOD_ALT) == KMOD_ALT) {
+        if(modifiers & KMOD_ALT) {
+            modifiers = (SDL_Keymod)(modifiers | KMOD_ALT);
+        }
+    }
+    if((binding.modifiers & KMOD_SHIFT) == KMOD_SHIFT) {
+        if(modifiers & KMOD_SHIFT) {
+            modifiers = (SDL_Keymod)(modifiers | KMOD_SHIFT);
+        }
+    }
+    if((binding.modifiers & KMOD_GUI) == KMOD_GUI) {
+        if(modifiers & KMOD_GUI) {
+            modifiers = (SDL_Keymod)(modifiers | KMOD_GUI);
+        }
+    }
+
+    return binding.modifiers == modifiers;
+}
+
+bool SdlInputHandler::applyUserKeyCombo(SDL_KeyboardEvent* event)
+{
+    if (!m_AbsoluteMouseMode || !m_UserCombosEnabled || m_IsProcessingUserCombo || m_UserKeyCombos.isEmpty()) {
+        return false;
+    }
+
+    if ((event->keysym.mod & KMOD_VIRTUAL_EVENT) != 0) {
+        return false;
+    }
+    
+    const SDL_Scancode scancode = event->keysym.scancode;
+    const SDL_Keymod modifiers = (SDL_Keymod)(event->keysym.mod & (KMOD_CTRL | KMOD_ALT | KMOD_SHIFT | KMOD_GUI));
+    
+    for (const UserKeyComboHx& combo : m_UserKeyCombos) {
+        if (!matchUserKeyBinding(combo.input, scancode, modifiers)) {
+            continue;
+        }
+/*
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "User combo intercept: incoming scancode=%d, modifiers=0x%X, state=%s; matched binding scancode=%d, modifiers=0x%X, outputs=%d",
+                    scancode,
+                    modifiers,
+                    event->state == SDL_PRESSED ? "pressed" : "released",
+                    combo.input.scancode,
+                    combo.input.modifiers,
+                    combo.outputs.size());
+*/
+        if (combo.outputs.isEmpty()) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "User combo configured as blocker; swallowing event (scancode=0x%X, mods=0x%X)",
+                        scancode,
+                        modifiers);
+            return true;
+        }
+        else {
+            if (event->state == SDL_PRESSED) {
+                for (int i = 0; i < combo.outputs.size(); ++i) {
+/*
+                    const UserKeyKShHx& outputBinding = combo.outputs.at(i);
+                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                "  [%d] scancode=%d, modifiers=0x%X",
+                                i,
+                                outputBinding.scancode,
+                                outputBinding.modifiers);
+*/
+                }
+                playbackUserKeyCombo(combo, modifiers);
+            }
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void SdlInputHandler::playbackUserKeyCombo(const UserKeyComboHx& combo, SDL_Keymod input_modifiers)
+{
+    if (combo.outputs.isEmpty()) {
+        return;
+    }
+
+    m_IsProcessingUserCombo = true;
+
+    SDL_KeyboardEvent synthesizedEvent = {};
+    synthesizedEvent.repeat = 0;
+
+    struct ModifierMapping {
+        SDL_Keymod modifier;
+        SDL_Scancode scancode;
+    };
+
+    static const ModifierMapping modifierMappings[] = {
+        {KMOD_LCTRL, SDL_SCANCODE_LCTRL},
+        {KMOD_RCTRL, SDL_SCANCODE_RCTRL},
+        {KMOD_LSHIFT, SDL_SCANCODE_LSHIFT},
+        {KMOD_RSHIFT, SDL_SCANCODE_RSHIFT},
+        {KMOD_LALT, SDL_SCANCODE_LALT},
+        {KMOD_RALT, SDL_SCANCODE_RALT},
+        {KMOD_LGUI, SDL_SCANCODE_LGUI},
+        {KMOD_RGUI, SDL_SCANCODE_RGUI},
+    };
+
+    auto iterateModifiers = [&](SDL_Keymod mask, auto&& callback) {
+        for (const ModifierMapping& mapping : modifierMappings) {
+            if ((mask & mapping.modifier) != 0) {
+                callback(mapping);
+            }
+        }
+    };
+
+    SDL_Keymod activeModifiers = input_modifiers;
+
+    auto emitModifierEvent = [&](const ModifierMapping& mapping, bool pressed) {
+        if (mapping.scancode == SDL_SCANCODE_UNKNOWN) {
+            return;
+        }
+
+        if (pressed) {
+            activeModifiers = (SDL_Keymod)(activeModifiers | mapping.modifier);
+        }
+
+        synthesizedEvent.state = pressed ? SDL_PRESSED : SDL_RELEASED;
+        synthesizedEvent.type = pressed ? SDL_KEYDOWN : SDL_KEYUP;
+        synthesizedEvent.keysym.scancode = mapping.scancode;
+        synthesizedEvent.keysym.mod = (SDL_Keymod)(activeModifiers | KMOD_VIRTUAL_EVENT);
+        handleKeyEvent(&synthesizedEvent);
+
+        if (!pressed) {
+            activeModifiers = (SDL_Keymod)(activeModifiers & ~mapping.modifier);
+        }
+    };
+
+    QVector<const ModifierMapping*> inputModifierSequence;
+    iterateModifiers(activeModifiers, [&](const ModifierMapping& mapping) {
+        inputModifierSequence.append(&mapping);
+    });
+
+    // Release input modifiers before injecting the outgoing combo
+    for (const ModifierMapping* mapping : inputModifierSequence) {
+        emitModifierEvent(*mapping, false);
+    }
+
+    for (const UserKeyKShHx& binding : combo.outputs) {
+        if (binding.scancode == SDL_SCANCODE_UNKNOWN) {
+            continue;
+        }
+
+        QVector<const ModifierMapping*> outputModifierSequence;
+        iterateModifiers(binding.modifiers, [&](const ModifierMapping& mapping) {
+            outputModifierSequence.append(&mapping);
+        });
+
+        for (const ModifierMapping* mapping : outputModifierSequence) {
+            emitModifierEvent(*mapping, true);
+        }
+
+        synthesizedEvent.state = SDL_PRESSED;
+        synthesizedEvent.type = SDL_KEYDOWN;
+        synthesizedEvent.keysym.scancode = binding.scancode;
+        synthesizedEvent.keysym.mod = (SDL_Keymod)(activeModifiers | KMOD_VIRTUAL_EVENT);
+        handleKeyEvent(&synthesizedEvent);
+
+        synthesizedEvent.state = SDL_RELEASED;
+        synthesizedEvent.type = SDL_KEYUP;
+        handleKeyEvent(&synthesizedEvent);
+
+        for (auto it = outputModifierSequence.crbegin(); it != outputModifierSequence.crend(); ++it) {
+            emitModifierEvent(**it, false);
+        }
+    }
+
+    // Restore input modifiers so the physical release remains consistent
+    for (const ModifierMapping* mapping : inputModifierSequence) {
+        emitModifierEvent(*mapping, true);
+    }
+
+    m_IsProcessingUserCombo = false;
+}
+
+void SdlInputHandler::setUserComboEnabled(bool enabled)
+{
+    m_UserCombosEnabled = enabled;
+}
+
+bool SdlInputHandler::userComboEnabled() const
+{
+    return m_UserCombosEnabled;
 }
 
 void SdlInputHandler::raiseAllKeys()

@@ -15,6 +15,7 @@
 
 void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
 {
+    static bool set_dspl_len_owerley_fl = false;
     switch (combo) {
     case KeyComboQuit:
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
@@ -139,6 +140,16 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
         updatePointerRegionLock();
         break;
 
+    case KeyComboToggleUserCombos:
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Detected user combo toggle combo");
+
+        setUserComboEnabled(!userComboEnabled());
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "User combos %s",
+                    userComboEnabled() ? "enabled" : "disabled");
+        break;
+
     case KeyComboQuitAndExit:
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "Detected quitAndExit key combo");
@@ -152,6 +163,52 @@ void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
         quitExitEvent.quit.timestamp = SDL_GetTicks();
         SDL_PushEvent(&quitExitEvent);
         break;
+
+    case KeyComboSetDsplLen:
+    {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Detected set_dspl_len key combo");
+        dspl_len++;
+        if(dspl_len == 10)
+            dspl_len = 1;
+        dspl_view = dspl_len - 1;
+        Session::get()->updateClientDisplayCount(dspl_len);
+        auto& overlay = Session::get()->getOverlayManager();
+        char buf[256];
+        sprintf(buf, "\ndspl_len = %d\n _ ", dspl_len);
+        overlay.updateOverlayText(Overlay::OverlayStatusUpdate, (std::string("Detected set_dspl_len key combo") + buf).c_str());
+        overlay.setOverlayState(Overlay::OverlayStatusUpdate, true);
+        set_dspl_len_owerley_fl = true;
+
+        [[fallthrough]];
+    }
+    case KeyComboNextDsplView:
+    {
+        if (combo == KeyComboNextDsplView) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Detected NextDsplView key combo");
+            dspl_view++;
+            dspl_view = dspl_view % dspl_len;
+            if(set_dspl_len_owerley_fl) {
+                auto& overlay = Session::get()->getOverlayManager();
+                overlay.setOverlayState(Overlay::OverlayStatusUpdate, false);
+                set_dspl_len_owerley_fl = false;
+            }
+        }
+
+        SDL_KeyboardEvent synthesizedEvent = {};
+        synthesizedEvent.repeat = 0;
+
+        synthesizedEvent.state = SDL_PRESSED;
+        synthesizedEvent.type = SDL_KEYDOWN;
+        synthesizedEvent.keysym.scancode = (SDL_Scancode)(SDL_SCANCODE_F1 + dspl_view);
+        synthesizedEvent.keysym.mod = (SDL_Keymod)(KMOD_CTRL | KMOD_ALT | KMOD_SHIFT);
+        handleKeyEvent(&synthesizedEvent);
+
+        synthesizedEvent.state = SDL_RELEASED;
+        synthesizedEvent.type = SDL_KEYUP;
+        handleKeyEvent(&synthesizedEvent);
+
+        break;
+    }
 
     default:
         Q_UNREACHABLE();
@@ -170,6 +227,10 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
         return;
     }
 
+    if (applyUserKeyCombo(event)) {
+        return;
+    }
+
     // Check for our special key combos
     if ((event->state == SDL_PRESSED) &&
             (event->keysym.mod & KMOD_CTRL) &&
@@ -185,6 +246,8 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
         // any scancode tests to avoid issues in cases
         // where the SDLK for one shortcut collides with
         // the scancode of another.
+
+        //SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq  keyCode = %d/0x%X, scanCode = %d/0x%X", event->keysym.sym, event->keysym.sym, event->keysym.scancode, event->keysym.scancode);
 
         for (int i = 0; i < KeyComboMax; i++) {
             if (m_SpecialKeyCombos[i].enabled && event->keysym.sym == m_SpecialKeyCombos[i].keyCode) {

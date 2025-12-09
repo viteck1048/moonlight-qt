@@ -6,9 +6,78 @@ Moonlight also has mobile versions for [Android](https://github.com/moonlight-st
 
 You can follow development on our [Discord server](https://moonlight-stream.org/discord) and help translate Moonlight into your language on [Weblate](https://hosted.weblate.org/projects/moonlight/moonlight-qt/).
 
- [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/glj5cxqwy2w3bglv/branch/master?svg=true)](https://ci.appveyor.com/project/cgutman/moonlight-qt/branch/master)
+ [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/glj5cxqwy2w3bglv/branch/master?svg=true)](https://ci.appveyor.io/project/cgutman/moonlight-qt/branch/master)
  [![Downloads](https://img.shields.io/github/downloads/moonlight-stream/moonlight-qt/total)](https://github.com/moonlight-stream/moonlight-qt/releases)
  [![Translation Status](https://hosted.weblate.org/widgets/moonlight/-/moonlight-qt/svg-badge.svg)](https://hosted.weblate.org/projects/moonlight/moonlight-qt/)
+
+## Fork Features
+
+This fork adds enhanced remote desktop functionality and custom key remapping:
+
+- **Remote display cycling**: Switch between host displays in a loop using hotkeys
+- **Custom hotkey remapping**: Remap Moonlight and Sunshine hotkeys for better remote desktop workflow
+- **Sunshine compatibility**: For Sunshine hosts, Moonlight combinations are automatically converted to expected Sunshine equivalents before sending
+- **Display count persistence**: Host display count is stored in the paired computer data for proper cycling functionality
+- **SDL-based key mapping**: Uses SDL scancode encoding for keymap.xml storage/reading with SDL_scancode<=>string translators per SDL specifications
+- **Dual-array architecture**: 
+  - **Intermediate array**: Token-based string array matching XML hierarchy, used in settings UI
+  - **Runtime array**: Binary encoding array created at session start and passed to SdlInputHandler for on-the-fly key substitution via `applyUserKeyCombo(event)`
+- **Game mode isolation**: Custom remapping is automatically disabled when switching to game mouse capture mode, ensuring no impact on gaming performance
+- **Auto-detect UI**: Settings menu includes key capture functionality with SDL scancode/modifier substitution (currently tested on Windows with some key detection issues, but manual input/editing works using SDL_scancode and SDL_Keymod definitions)
+- **Cross-platform support**: Keyboard mapping tables and translators in `keyboardmapping.cpp` (AI-generated, requires testing and debugging across platforms)
+
+## Implementation Details
+
+### **Core Components Added**
+- **Configuration Manager**: `streaming/input/userkeycombos.(h|cpp)` - Core logic for key mapping management
+- **QML Bridge**: `gui/userkeycombobridge.(h|cpp)` - Integration layer for QML UI
+- **SDL Conversion Tools**: `streaming/input/keyboardmapping.(h|cpp)` - SDL scancode ↔ native scancode translators
+- **UI Extension**: `app/gui/SettingsView.qml` - Complete interface for editing/detecting/saving keymap.xml
+
+### **Input Handling Changes**
+- **`streaming/input/input.cpp` & `keyboard.cpp`**: 
+  - User combo application via `applyUserKeyCombo(event)`
+  - Synthetic event playback for remapped keys
+  - New special key combinations:
+    - `Ctrl+Alt+Shift+U` - Toggle custom combos
+    - Cyclic display switching
+    - Pointer region lock controls
+- **StreamingPreferences**: Added `pointerRegionLock` and `userCombosEnabled` options with persistence
+
+### **Display Management**
+- **`app/backend/nvcomputer.(h|cpp)`**: Added `clientDisplayCount` persistence in paired computer data
+- **Session Integration**: Display count updates and cyclic switching mechanisms
+
+### **Build & Integration Changes**
+- **`app/app.pro`**: Added new source files to build configuration
+- **`app/main.cpp`**: QML type registration for `UserKeyComboBridge`
+- **Integration Files**: `app/gui/appmodel.cpp`, `app/gui/computermodel.cpp`, `app/cli/startstream.cpp`, `app/streaming/session.cpp/.h` - Parameter/object integration
+
+### **Complete File List**
+```
+README.md
+app/app.pro
+app/backend/nvcomputer.cpp
+app/backend/nvcomputer.h
+app/cli/startstream.cpp
+app/gui/SettingsView.qml
+app/gui/appmodel.cpp
+app/gui/computermodel.cpp
+app/gui/userkeycombobridge.cpp (new)
+app/gui/userkeycombobridge.h (new)
+app/main.cpp
+app/settings/streamingpreferences.cpp
+app/settings/streamingpreferences.h
+app/streaming/input/input.cpp
+app/streaming/input/input.h
+app/streaming/input/keyboard.cpp
+app/streaming/input/keyboardmapping.cpp (new)
+app/streaming/input/keyboardmapping.h (new)
+app/streaming/input/userkeycombos.cpp (new)
+app/streaming/input/userkeycombos.h (new)
+app/streaming/session.cpp
+app/streaming/session.h
+```
 
 ## Features
  - Hardware accelerated video decoding on Windows, Mac, and Linux

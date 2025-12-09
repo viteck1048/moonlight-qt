@@ -45,6 +45,7 @@
 #include <openssl/rand.h>
 
 #include <QtEndian>
+#include <QtGlobal>
 #include <QCoreApplication>
 #include <QThreadPool>
 #include <QSvgRenderer>
@@ -54,6 +55,7 @@
 #include <QCursor>
 #include <QWindow>
 #include <QScreen>
+#include <QWriteLocker>
 
 #define CONN_TEST_SERVER "qt.conntest.moonlight-stream.org"
 
@@ -563,11 +565,12 @@ bool Session::populateDecoderProperties(SDL_Window* window)
     return true;
 }
 
-Session::Session(NvComputer* computer, NvApp& app, StreamingPreferences *preferences)
+Session::Session(NvComputer* computer, NvApp& app, StreamingPreferences *preferences, ComputerManager* computerManager)
     : m_Preferences(preferences ? preferences : StreamingPreferences::get()),
       m_IsFullScreen(m_Preferences->windowMode != StreamingPreferences::WM_WINDOWED || !WMUtils::isRunningDesktopEnvironment()),
       m_Computer(computer),
       m_App(app),
+      m_ComputerManager(computerManager),
       m_Window(nullptr),
       m_VideoDecoder(nullptr),
       m_DecoderLock(SDL_CreateMutex()),
@@ -1717,6 +1720,26 @@ void Session::setShouldExitAfterQuit()
     m_ShouldExitAfterQuit = true;
 }
 
+void Session::updateClientDisplayCount(int count)
+{
+    if (m_Computer == nullptr || m_ComputerManager == nullptr) {
+        return;
+    }
+
+    count = qBound(1, count, 9);
+
+    {
+        QWriteLocker lock(&m_Computer->lock);
+        if (m_Computer->clientDisplayCount == count) {
+            return;
+        }
+
+        m_Computer->clientDisplayCount = count;
+    }
+
+    m_ComputerManager->clientSideAttributeUpdated(m_Computer);
+}
+
 class ExecThread : public QThread
 {
 public:
@@ -1791,7 +1814,11 @@ void Session::execInternal()
 
     // Initialize the gamepad code with our preferences
     // NB: m_InputHandler must be initialize before starting the connection.
-    m_InputHandler = new SdlInputHandler(*m_Preferences, m_StreamConfig.width, m_StreamConfig.height);
+    m_InputHandler = new SdlInputHandler(*m_Preferences,
+                                         m_StreamConfig.width,
+                                         m_StreamConfig.height,
+                                         UserKeyComboManager::instance().runtimeCombos(),
+                                         m_Computer ? m_Computer->clientDisplayCount : 1);
 
     AsyncConnectionStartThread asyncConnThread(this);
     if (!m_ThreadedExec) {
