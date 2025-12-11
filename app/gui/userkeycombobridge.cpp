@@ -218,6 +218,12 @@ QString UserKeyComboBridge::keyEventToTokens(int nativeScancode, int nativeModif
     // Get scancode token
     const char* scancodeToken = mapper.scancodeToToken(scancode);
     
+    char buf[44];
+    if(scancode == SDL_SCANCODE_UNKNOWN) {
+        snprintf(buf, sizeof(buf), "0x%08X", nativeScancode);
+        scancodeToken = buf;
+    }
+
     // Build the combined token string
     QStringList tokens;
     for (const QString& mod : modTokens) {
