@@ -141,8 +141,8 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs,
     m_SpecialKeyCombos[KeyComboSetDsplLen].enabled = true;
 
     m_SpecialKeyCombos[KeyComboNextDsplView].keyCombo = KeyComboNextDsplView;
-    m_SpecialKeyCombos[KeyComboNextDsplView].keyCode = SDLK_n;
-    m_SpecialKeyCombos[KeyComboNextDsplView].scanCode = SDL_SCANCODE_N;
+    m_SpecialKeyCombos[KeyComboNextDsplView].keyCode = SDLK_o;
+    m_SpecialKeyCombos[KeyComboNextDsplView].scanCode = SDL_SCANCODE_O;
     m_SpecialKeyCombos[KeyComboNextDsplView].enabled = true;
 
     m_OldIgnoreDevices = SDL_GetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES);
@@ -343,6 +343,8 @@ bool SdlInputHandler::applyUserKeyCombo(SDL_KeyboardEvent* event)
                         scancode,
                         modifiers);
             return true;
+            //event->keysym.scancode = SDL_SCANCODE_R;
+            //return false;
         }
         else {
             if (event->state == SDL_PRESSED) {

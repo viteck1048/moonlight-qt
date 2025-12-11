@@ -2086,7 +2086,7 @@ Flickable {
 
             Rectangle {
                 width: parent.width
-                implicitHeight: 750
+                implicitHeight: 850
                 color: "#202020"
                 radius: 6
                 border.color: "#3a3a3a"
@@ -2141,7 +2141,8 @@ Flickable {
                                       qsTr("Ctrl + Alt + Shift + U\nEnable/disable custom key remaps\n\n") +
                                       qsTr("Ctrl + Alt + Shift + F1-F9\nSwitch displays on host\n\n") +
                                       qsTr("Ctrl + Alt + Shift + P\nDeclare how many displays are attached on the host\n\n") +
-                                      qsTr("Ctrl + Alt + Shift + N\nCycle to the next declared display (simulates the matching F-key)\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + O\nCycle to the next declared display (simulates the matching F-key)\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + N\nShow/hide host pointer \n\n") +
                                       qsTr("Note: Switching to game mode with Ctrl+Alt+Shift+M disables custom remaps (+U) and enables pointer lock (+L).\n\n") +
                                       qsTr("These shortcuts are hard-coded on client and host. Enter a replacement in the 'Input' fields below and provide desired outputs in 'Out' to override them.")
                                 wrapMode: Text.WordWrap
