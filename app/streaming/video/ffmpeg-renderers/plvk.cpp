@@ -9,7 +9,9 @@
 
 #include <SDL_vulkan.h>
 
+extern "C" {
 #include <libavutil/hwcontext_vulkan.h>
+}
 
 #include <vector>
 #include <set>
@@ -19,7 +21,40 @@
 #define VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR ((VkVideoCodecOperationFlagBitsKHR)0x00000004)
 #endif
 
-// Keep these in sync with hwcontext_vulkan.c
+#ifdef HAVE_DRM_MASTER_HOOKS
+extern "C" {
+void lockDrmMaster();
+void unlockDrmMaster();
+}
+#endif
+
+// Many operations like setting a display mode or creating a swapchain
+// may require the Vulkan implementation to have DRM master in a KMSDRM
+// environment. Since this will not necessarily be the case during decoder
+// probing (when the Qt UI is still rendering), we need to grab the DRM
+// master lock to prevent Qt from taking it out from under us.
+class DrmMasterLocker {
+public:
+    DrmMasterLocker() {
+#ifdef HAVE_DRM_MASTER_HOOKS
+        lockDrmMaster();
+#endif
+    }
+
+    ~DrmMasterLocker() {
+#ifdef HAVE_DRM_MASTER_HOOKS
+        unlockDrmMaster();
+#endif
+    }
+
+    // Disallow copies and moves
+    DrmMasterLocker(const DrmMasterLocker&) = delete;
+    DrmMasterLocker& operator=(const DrmMasterLocker&) = delete;
+    DrmMasterLocker(DrmMasterLocker&&) noexcept = delete;
+    DrmMasterLocker& operator=(DrmMasterLocker&&) noexcept = delete;
+};
+
+#if LIBAVUTIL_VERSION_INT < AV_VERSION_INT(60, 26, 100)
 static const char *k_OptionalDeviceExtensions[] = {
     /* Misc or required by other extensions */
     //VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
@@ -52,6 +87,7 @@ static const char *k_OptionalDeviceExtensions[] = {
     "VK_MESA_video_decode_av1", // FFmpeg 6.1 uses the Mesa AV1 extension
 #endif
 };
+#endif
 
 static void pl_log_cb(void*, enum pl_log_level level, const char *msg)
 {
@@ -98,10 +134,10 @@ void PlVkRenderer::overlayUploadComplete(void* opaque)
     SDL_FreeSurface((SDL_Surface*)opaque);
 }
 
-PlVkRenderer::PlVkRenderer(bool hwaccel, IFFmpegRenderer *backendRenderer) :
+PlVkRenderer::PlVkRenderer(AVHWDeviceType hwDeviceType, IFFmpegRenderer *backendRenderer) :
     IFFmpegRenderer(RendererType::Vulkan),
     m_Backend(backendRenderer),
-    m_HwAccelBackend(hwaccel)
+    m_HwDeviceType(hwDeviceType)
 {
     bool ok;
 
@@ -135,20 +171,25 @@ PlVkRenderer::~PlVkRenderer()
         }
     }
 
-    pl_renderer_destroy(&m_Renderer);
-    pl_swapchain_destroy(&m_Swapchain);
-    pl_vulkan_destroy(&m_Vulkan);
+    {
+        // Hold DRM master in case the Vulkan implmentation wants to restore DRM state
+        DrmMasterLocker locker;
 
-    // This surface was created by SDL, so there's no libplacebo API to destroy it
-    if (fn_vkDestroySurfaceKHR && m_VkSurface) {
-        fn_vkDestroySurfaceKHR(m_PlVkInstance->instance, m_VkSurface, nullptr);
-    }
+        pl_renderer_destroy(&m_Renderer);
+        pl_swapchain_destroy(&m_Swapchain);
+#ifdef Q_OS_DARWIN
+        m_MetalTextureFactory.reset();
+#endif
+        pl_vulkan_destroy(&m_Vulkan);
 
-    if (m_HwDeviceCtx != nullptr) {
+        // This surface was created by SDL, so there's no libplacebo API to destroy it
+        if (fn_vkDestroySurfaceKHR && m_VkSurface) {
+            fn_vkDestroySurfaceKHR(m_PlVkInstance->instance, m_VkSurface, nullptr);
+        }
+
         av_buffer_unref(&m_HwDeviceCtx);
+        pl_vk_inst_destroy(&m_PlVkInstance);
     }
-
-    pl_vk_inst_destroy(&m_PlVkInstance);
 
     // m_Log must always be the last object destroyed
     pl_log_destroy(&m_Log);
@@ -246,20 +287,8 @@ bool PlVkRenderer::tryInitializeDevice(VkPhysicalDevice device, VkPhysicalDevice
         return false;
     }
 
-#ifdef Q_OS_WIN32
-    // Intel's Windows drivers seem to have interoperability issues as of FFmpeg 7.0.1
-    // when using Vulkan Video decoding. Since they also expose HEVC REXT profiles using
-    // D3D11VA, let's reject them here so we can select a different Vulkan device or
-    // just allow D3D11VA to take over.
-    if (m_HwAccelBackend && deviceProps->vendorID == 0x8086 && !qEnvironmentVariableIntValue("PLVK_ALLOW_INTEL")) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Skipping Intel GPU for Vulkan Video due to broken drivers");
-        return false;
-    }
-#endif
-
     // If we're acting as the decoder backend, we need a physical device with Vulkan video support
-    if (m_HwAccelBackend) {
+    if (m_HwDeviceType == AV_HWDEVICE_TYPE_VULKAN) {
         const char* videoDecodeExtension;
 
         if (decoderParams->videoFormat & VIDEO_FORMAT_MASK_H264) {
@@ -289,6 +318,18 @@ bool PlVkRenderer::tryInitializeDevice(VkPhysicalDevice device, VkPhysicalDevice
                         videoDecodeExtension);
             return false;
         }
+
+#ifdef Q_OS_WIN32
+        // Intel's Windows drivers seem to have interoperability issues as of FFmpeg 7.0.1
+        // when using Vulkan Video decoding. Since they also expose HEVC REXT profiles using
+        // D3D11VA, let's reject them here so we can select a different Vulkan device or
+        // just allow D3D11VA to take over.
+        if (deviceProps->vendorID == 0x8086 && !qEnvironmentVariableIntValue("PLVK_ALLOW_INTEL")) {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                        "Skipping Intel GPU for Vulkan Video due to broken drivers");
+            return false;
+        }
+#endif
     }
 
     if (!isSurfacePresentationSupportedByPhysicalDevice(device)) {
@@ -318,10 +359,28 @@ bool PlVkRenderer::tryInitializeDevice(VkPhysicalDevice device, VkPhysicalDevice
     vkParams.get_proc_addr = m_PlVkInstance->get_proc_addr;
     vkParams.surface = m_VkSurface;
     vkParams.device = device;
-    vkParams.opt_extensions = k_OptionalDeviceExtensions;
-    vkParams.num_opt_extensions = SDL_arraysize(k_OptionalDeviceExtensions);
-    vkParams.extra_queues = m_HwAccelBackend ? VK_QUEUE_FLAG_BITS_MAX_ENUM : 0;
-    m_Vulkan = pl_vulkan_create(m_Log, &vkParams);
+
+    if (m_HwDeviceType == AV_HWDEVICE_TYPE_VULKAN) {
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(60, 26, 100)
+        vkParams.opt_extensions = av_vk_get_optional_device_extensions(&vkParams.num_opt_extensions);
+#else
+        vkParams.opt_extensions = k_OptionalDeviceExtensions;
+        vkParams.num_opt_extensions = SDL_arraysize(k_OptionalDeviceExtensions);
+#endif
+        vkParams.extra_queues = VK_QUEUE_FLAG_BITS_MAX_ENUM;
+    }
+
+    {
+        // Don't let Qt take DRM master from us during pl_vulkan_create()
+        DrmMasterLocker locker;
+
+        m_Vulkan = pl_vulkan_create(m_Log, &vkParams);
+    }
+
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(60, 26, 100)
+    av_free((void*)vkParams.opt_extensions);
+#endif
+
     if (m_Vulkan == nullptr) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                      "pl_vulkan_create() failed for '%s'",
@@ -407,12 +466,17 @@ bool PlVkRenderer::initialize(PDECODER_PARAMETERS params)
     POPULATE_FUNCTION(vkGetPhysicalDeviceSurfaceSupportKHR);
     POPULATE_FUNCTION(vkEnumerateDeviceExtensionProperties);
 
-    if (!SDL_Vulkan_CreateSurface(params->window, m_PlVkInstance->instance, &m_VkSurface)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "SDL_Vulkan_CreateSurface() failed: %s",
-                     SDL_GetError());
-        m_InitFailureReason = InitFailureReason::NoSoftwareSupport;
-        return false;
+    {
+        // Don't let Qt take DRM master from us during SDL_Vulkan_CreateSurface()
+        DrmMasterLocker locker;
+
+        if (!SDL_Vulkan_CreateSurface(params->window, m_PlVkInstance->instance, &m_VkSurface)) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                         "SDL_Vulkan_CreateSurface() failed: %s",
+                         SDL_GetError());
+            m_InitFailureReason = InitFailureReason::NoSoftwareSupport;
+            return false;
+        }
     }
 
     // Enumerate physical devices and choose one that is suitable for our needs.
@@ -469,11 +533,17 @@ bool PlVkRenderer::initialize(PDECODER_PARAMETERS params)
 #if PL_API_VER >= 338
     vkSwapchainParams.disable_10bit_sdr = true; // Some drivers don't dither 10-bit SDR output correctly
 #endif
-    m_Swapchain = pl_vulkan_create_swapchain(m_Vulkan, &vkSwapchainParams);
-    if (m_Swapchain == nullptr) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "pl_vulkan_create_swapchain() failed");
-        return false;
+
+    {
+        // Don't let Qt take DRM master from us during pl_vulkan_create_swapchain()
+        DrmMasterLocker locker;
+
+        m_Swapchain = pl_vulkan_create_swapchain(m_Vulkan, &vkSwapchainParams);
+        if (m_Swapchain == nullptr) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                         "pl_vulkan_create_swapchain() failed");
+            return false;
+        }
     }
 
     m_Renderer = pl_renderer_create(m_Log, m_Vulkan->gpu);
@@ -484,7 +554,7 @@ bool PlVkRenderer::initialize(PDECODER_PARAMETERS params)
     }
 
     // We only need an hwaccel device context if we're going to act as the backend renderer too
-    if (m_HwAccelBackend) {
+    if (m_HwDeviceType == AV_HWDEVICE_TYPE_VULKAN) {
         m_HwDeviceCtx = av_hwdevice_ctx_alloc(AV_HWDEVICE_TYPE_VULKAN);
         if (m_HwDeviceCtx == nullptr) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -521,17 +591,46 @@ bool PlVkRenderer::initialize(PDECODER_PARAMETERS params)
             return false;
         }
     }
+    else if (m_HwDeviceType != AV_HWDEVICE_TYPE_NONE) {
+        int err = av_hwdevice_ctx_create(&m_HwDeviceCtx,
+                                         m_HwDeviceType,
+                                         nullptr,
+                                         nullptr,
+                                         0);
+        if (err < 0) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                         "av_hwdevice_ctx_create() failed: %d",
+                         err);
+            return false;
+        }
+    }
+
+#ifdef Q_OS_DARWIN
+    m_MetalTextureFactory = std::make_unique<MetalVulkanTextureFactory>(m_Vulkan);
+
+    // Set an initial wide colorspace hint to ensure that MoltenVK sets wantsExtendedDynamicRangeContent
+    // before we request the first drawable. If we don't do this, our Metal layer ends up stuck in SDR
+    // mode even if we later change the colorspace to VK_COLOR_SPACE_HDR10_ST2084_EXT.
+    if (params->videoFormat & VIDEO_FORMAT_MASK_10BIT) {
+        pl_color_space wideColorspace = {};
+        wideColorspace.primaries = PL_COLOR_PRIM_BT_709;
+        wideColorspace.transfer = PL_COLOR_TRC_SCRGB;
+        pl_swapchain_colorspace_hint(m_Swapchain, &wideColorspace);
+    }
+#endif
 
     return true;
 }
 
 bool PlVkRenderer::prepareDecoderContext(AVCodecContext *context, AVDictionary **)
 {
-    if (m_HwAccelBackend) {
+    if (m_HwDeviceCtx) {
+        context->hw_device_ctx = av_buffer_ref(m_HwDeviceCtx);
+    }
+
+    if (m_HwDeviceType == AV_HWDEVICE_TYPE_VULKAN) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "Using Vulkan video decoding");
-
-        context->hw_device_ctx = av_buffer_ref(m_HwDeviceCtx);
     }
     else {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
@@ -543,13 +642,23 @@ bool PlVkRenderer::prepareDecoderContext(AVCodecContext *context, AVDictionary *
 
 bool PlVkRenderer::mapAvFrameToPlacebo(const AVFrame *frame, pl_frame* mappedFrame)
 {
-    pl_avframe_params mapParams = {};
-    mapParams.frame = frame;
-    mapParams.tex = m_Textures;
-    if (!pl_map_avframe_ex(m_Vulkan->gpu, mappedFrame, &mapParams)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "pl_map_avframe_ex() failed");
-        return false;
+#ifdef Q_OS_DARWIN
+    if (frame->format == AV_PIX_FMT_VIDEOTOOLBOX) {
+        if (!m_MetalTextureFactory->mapVideoToolboxToPlacebo(frame, mappedFrame)) {
+            return false;
+        }
+    }
+    else
+#endif
+    {
+        pl_avframe_params mapParams = {};
+        mapParams.frame = frame;
+        mapParams.tex = m_Textures;
+        if (!pl_map_avframe_ex(m_Vulkan->gpu, mappedFrame, &mapParams)) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                         "pl_map_avframe_ex() failed");
+            return false;
+        }
     }
 
     // libplacebo assumes a minimum luminance value of 0 means the actual value was unknown.
@@ -569,6 +678,19 @@ bool PlVkRenderer::mapAvFrameToPlacebo(const AVFrame *frame, pl_frame* mappedFra
     mappedFrame->repr.levels = PL_COLOR_LEVELS_FULL;
 
     return true;
+}
+
+void PlVkRenderer::unmapAvFrameFromPlacebo(const AVFrame *frame, pl_frame* mappedFrame)
+{
+#ifdef Q_OS_DARWIN
+    if (frame->format == AV_PIX_FMT_VIDEOTOOLBOX) {
+        m_MetalTextureFactory->unmapVideoToolboxFromPlacebo(mappedFrame);
+    }
+    else
+#endif
+    {
+        pl_unmap_avframe(m_Vulkan->gpu, mappedFrame);
+    }
 }
 
 bool PlVkRenderer::populateQueues(int videoFormat)
@@ -806,6 +928,7 @@ void PlVkRenderer::renderFrame(AVFrame *frame)
         // If we have an overlay but it's been disabled, free the overlay texture
         if (m_Overlays[i].hasOverlay && !Session::get()->getOverlayManager().isOverlayEnabled((Overlay::OverlayType)i)) {
             texturesToDestroy.push_back(m_Overlays[i].overlay.tex);
+            SDL_zero(m_Overlays[i].overlay);
             m_Overlays[i].hasOverlay = false;
         }
 
@@ -871,7 +994,7 @@ void PlVkRenderer::renderFrame(AVFrame *frame)
 
         // Recreate the renderer
         SDL_Event event;
-        event.type = SDL_RENDER_TARGETS_RESET;
+        event.type = SDL_RENDER_DEVICE_RESET;
         SDL_PushEvent(&event);
         goto UnmapExit;
     }
@@ -884,22 +1007,35 @@ void PlVkRenderer::renderFrame(AVFrame *frame)
 
 UnmapExit:
     // Delete any textures that need to be destroyed
-    for (pl_tex texture : texturesToDestroy) {
+    for (pl_tex& texture : texturesToDestroy) {
         pl_tex_destroy(m_Vulkan->gpu, &texture);
     }
 
-    pl_unmap_avframe(m_Vulkan->gpu, &mappedFrame);
+    unmapAvFrameFromPlacebo(frame, &mappedFrame);
 }
 
 bool PlVkRenderer::testRenderFrame(AVFrame *frame)
 {
+#if PL_API_VER < 360
+    {
+        // Add a check for unrecognized pixel formats on older libplacebo
+        // versions which will dereference a null pointer in this case.
+        // See #1409 for details.
+        pl_frame out;
+        pl_frame_from_avframe(&out, frame);
+        if (out.num_planes == 0) {
+            return false;
+        }
+    }
+#endif
+
     // Test if the frame can be mapped to libplacebo
     pl_frame mappedFrame;
     if (!mapAvFrameToPlacebo(frame, &mappedFrame)) {
         return false;
     }
 
-    pl_unmap_avframe(m_Vulkan->gpu, &mappedFrame);
+    unmapAvFrameFromPlacebo(frame, &mappedFrame);
     return true;
 }
 
@@ -1021,15 +1157,9 @@ int PlVkRenderer::getDecoderCapabilities()
            CAPABILITY_REFERENCE_FRAME_INVALIDATION_AV1;
 }
 
-bool PlVkRenderer::needsTestFrame()
-{
-    // We need a test frame to verify that Vulkan video decoding is working
-    return true;
-}
-
 bool PlVkRenderer::isPixelFormatSupported(int videoFormat, AVPixelFormat pixelFormat)
 {
-    if (m_HwAccelBackend) {
+    if (m_HwDeviceType == AV_HWDEVICE_TYPE_VULKAN) {
         return pixelFormat == AV_PIX_FMT_VULKAN;
     }
     else if (m_Backend) {

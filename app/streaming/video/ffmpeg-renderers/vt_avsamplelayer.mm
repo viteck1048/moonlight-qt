@@ -100,11 +100,11 @@ public:
 
         if (m_DisplayLayer != nullptr) {
             [m_DisplayLayer release];
-        }
 
-        // It appears to be necessary to run the event loop after destroying
-        // the AVSampleBufferDisplayLayer to avoid issue #973.
-        SDL_PumpEvents();
+            // It appears to be necessary to run the event loop after destroying
+            // the AVSampleBufferDisplayLayer to avoid issue #973.
+            SDL_PumpEvents();
+        }
     }}
 
     static
@@ -204,7 +204,7 @@ public:
 
             // Trigger the main thread to recreate the decoder
             SDL_Event event;
-            event.type = SDL_RENDER_TARGETS_RESET;
+            event.type = SDL_RENDER_DEVICE_RESET;
             SDL_PushEvent(&event);
             return;
         }
@@ -333,7 +333,7 @@ public:
         }
 
         // If we're using direct rendering, set up the AVSampleBufferDisplayLayer
-        if (m_DirectRendering) {
+        if (m_DirectRendering && !params->testOnly) {
             SDL_SysWMinfo info;
 
             SDL_VERSION(&info.version);
@@ -448,15 +448,6 @@ public:
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "Using VideoToolbox AVSampleBufferDisplayLayer renderer");
 
-        return true;
-    }
-
-    virtual bool needsTestFrame() override
-    {
-        // We used to trust VT to tell us whether decode will work, but
-        // there are cases where it can lie because the hardware technically
-        // can decode the format but VT is unserviceable for some other reason.
-        // Decoding the test frame will tell us for sure whether it will work.
         return true;
     }
 

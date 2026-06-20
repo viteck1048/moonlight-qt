@@ -22,19 +22,6 @@
 #define ICON_SIZE 64
 #endif
 
-// HACK: Remove once proper Dark Mode support lands in SDL
-#ifdef Q_OS_WIN32
-#include <SDL_syswm.h>
-#include <dwmapi.h>
-#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE_OLD
-#define DWMWA_USE_IMMERSIVE_DARK_MODE_OLD 19
-#endif
-#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
-#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
-#endif
-#endif
-
-
 #define SDL_CODE_FLUSH_WINDOW_EVENT_BARRIER 100
 #define SDL_CODE_GAMECONTROLLER_RUMBLE 101
 #define SDL_CODE_GAMECONTROLLER_RUMBLE_TRIGGERS 102
@@ -53,9 +40,12 @@
 #include <QImage>
 #include <QGuiApplication>
 #include <QCursor>
-#include <QWindow>
 #include <QScreen>
 #include <QWriteLocker>
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QQuickOpenGLUtils>
+#endif
 
 #define CONN_TEST_SERVER "qt.conntest.moonlight-stream.org"
 
@@ -532,28 +522,22 @@ bool Session::populateDecoderProperties(SDL_Window* window)
         m_VideoCallbacks.submitDecodeUnit = drSubmitDecodeUnit;
     }
 
-    {
-        bool ok;
+    if (Utils::getEnvironmentVariableOverride("COLOR_SPACE_OVERRIDE", &m_StreamConfig.colorSpace)) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Using colorspace override: %d",
+                    m_StreamConfig.colorSpace);
+    }
+    else {
+        m_StreamConfig.colorSpace = decoder->getDecoderColorspace();
+    }
 
-        m_StreamConfig.colorSpace = qEnvironmentVariableIntValue("COLOR_SPACE_OVERRIDE", &ok);
-        if (ok) {
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                        "Using colorspace override: %d",
-                        m_StreamConfig.colorSpace);
-        }
-        else {
-            m_StreamConfig.colorSpace = decoder->getDecoderColorspace();
-        }
-
-        m_StreamConfig.colorRange = qEnvironmentVariableIntValue("COLOR_RANGE_OVERRIDE", &ok);
-        if (ok) {
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                        "Using color range override: %d",
-                        m_StreamConfig.colorRange);
-        }
-        else {
-            m_StreamConfig.colorRange = decoder->getDecoderColorRange();
-        }
+    if (Utils::getEnvironmentVariableOverride("COLOR_RANGE_OVERRIDE", &m_StreamConfig.colorRange)) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Using color range override: %d",
+                    m_StreamConfig.colorRange);
+    }
+    else {
+        m_StreamConfig.colorRange = decoder->getDecoderColorRange();
     }
 
     if (decoder->isAlwaysFullScreen()) {
@@ -580,7 +564,7 @@ Session::Session(NvComputer* computer, NvApp& app, StreamingPreferences *prefere
       m_InputHandler(nullptr),
       m_MouseEmulationRefCount(0),
       m_FlushingWindowEventsRef(0),
-      m_ShouldExitAfterQuit(false),
+      m_ShouldExit(false),
       m_AsyncConnectionSuccess(false),
       m_PortTestResults(0),
       m_OpusDecoder(nullptr),
@@ -598,8 +582,10 @@ Session::~Session()
     SDL_DestroyMutex(m_DecoderLock);
 }
 
-bool Session::initialize()
+bool Session::initialize(QQuickWindow* qtWindow)
 {
+    m_QtWindow = qtWindow;
+
 #ifdef Q_OS_DARWIN
     if (qEnvironmentVariableIntValue("I_WANT_BUGGY_FULLSCREEN") == 0) {
         // If we have a notch and the user specified one of the two native display modes
@@ -649,6 +635,12 @@ bool Session::initialize()
         return false;
     }
 
+    // Stop text input. SDL enables it by default
+    // when we initialize the video subsystem, but this
+    // causes an IME popup when certain keys are held down
+    // on macOS.
+    SDL_StopTextInput();
+
     LiInitializeStreamConfiguration(&m_StreamConfig);
     m_StreamConfig.width = m_Preferences->width;
     m_StreamConfig.height = m_Preferences->height;
@@ -657,21 +649,13 @@ bool Session::initialize()
     getWindowDimensions(x, y, width, height);
 
     // Create a hidden window to use for decoder initialization tests
-    SDL_Window* testWindow = SDL_CreateWindow("", x, y, width, height,
-                                              SDL_WINDOW_HIDDEN | StreamUtils::getPlatformWindowFlags());
+    SDL_Window* testWindow = StreamUtils::createTestWindow();
     if (!testWindow) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Failed to create test window with platform flags: %s",
-                    SDL_GetError());
-
-        testWindow = SDL_CreateWindow("", x, y, width, height, SDL_WINDOW_HIDDEN);
-        if (!testWindow) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                         "Failed to create window for hardware decode test: %s",
-                         SDL_GetError());
-            SDL_QuitSubSystem(SDL_INIT_VIDEO);
-            return false;
-        }
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "Failed to create window for hardware decode test: %s",
+                     SDL_GetError());
+        SDL_QuitSubSystem(SDL_INIT_VIDEO);
+        return false;
     }
 
     qInfo() << "Server GPU:" << m_Computer->gpuModel;
@@ -798,31 +782,42 @@ bool Session::initialize()
             }
         }
 
-#if 0
-        // TODO: Determine if AV1 is better depending on the decoder
-        if (getDecoderAvailability(testWindow,
-                                   m_Preferences->videoDecoderSelection,
-                                   m_Preferences->enableYUV444 ?
-                                        (m_Preferences->enableHdr ? VIDEO_FORMAT_AV1_HIGH10_444 : VIDEO_FORMAT_AV1_HIGH8_444) :
-                                        (m_Preferences->enableHdr ? VIDEO_FORMAT_AV1_MAIN10 : VIDEO_FORMAT_AV1_MAIN8),
-                                   m_StreamConfig.width,
-                                   m_StreamConfig.height,
-                                   m_StreamConfig.fps) != DecoderAvailability::Hardware) {
-            // Deprioritize AV1 unless we can't hardware decode HEVC and have HDR enabled.
-            // We want to keep AV1 at the top of the list for HDR with software decoding
-            // because dav1d is higher performance than FFmpeg's HEVC software decoder.
-            if (hevcDA == DecoderAvailability::Hardware || !m_Preferences->enableHdr) {
-                m_SupportedVideoFormats.deprioritizeByMask(VIDEO_FORMAT_MASK_AV1);
-            }
-        }
-#else
-        // Deprioritize AV1 unless we can't hardware decode HEVC and have HDR enabled.
+        // Deprioritize AV1 unless we can't hardware decode HEVC, and have HDR enabled
+        // or we're on Windows or a non-x86 Linux/BSD.
+        //
+        // Normally, we'd assume hardware that can't decode HEVC definitely can't decode
+        // AV1 either, and we wouldn't even bother probing for AV1 support. However, some
+        // Windows business systems have HEVC support disabled in firmware from the factory,
+        // yet they can still decode AV1 in hardware. To avoid falling back to H.264 on
+        // these systems, we don't deprioritize AV1. This firmware-based HEVC licensing
+        // behavior seems to be unique to Windows, and Linux on the same system is able
+        // to decode HEVC in hardware normally using VAAPI.
+        // https://www.reddit.com/r/GeForceNOW/comments/1omsckt/psa_be_wary_of_purchasing_dell_computers_with/
+        //
+        // Some embedded Linux platforms have incomplete V4L2 decoding support which can
+        // lead to unusual cases where a system might support H.264 and AV1 but not HEVC,
+        // even if the underlying hardware supports all three. RK3588 is an example of
+        // such a SoC. To handle this situation, we will also probe for AV1 if we're on
+        // a non-x86 non-macOS UNIX system.
+        //
         // We want to keep AV1 at the top of the list for HDR with software decoding
         // because dav1d is higher performance than FFmpeg's HEVC software decoder.
-        if (hevcDA == DecoderAvailability::Hardware || !m_Preferences->enableHdr) {
+        if (hevcDA == DecoderAvailability::Hardware
+#if !defined(Q_OS_WIN32) && (!(defined(Q_OS_UNIX) && !defined(Q_OS_DARWIN)) || defined(Q_PROCESSOR_X86))
+            || !m_Preferences->enableHdr
+#endif
+            ) {
             m_SupportedVideoFormats.deprioritizeByMask(VIDEO_FORMAT_MASK_AV1);
         }
-#endif
+        else if (!m_Preferences->enableHdr &&
+                   getDecoderAvailability(testWindow,
+                                          m_Preferences->videoDecoderSelection,
+                                          m_Preferences->enableYUV444 ? VIDEO_FORMAT_AV1_HIGH8_444 : VIDEO_FORMAT_AV1_MAIN8,
+                                          m_StreamConfig.width,
+                                          m_StreamConfig.height,
+                                          m_StreamConfig.fps) != DecoderAvailability::Hardware) {
+            m_SupportedVideoFormats.deprioritizeByMask(VIDEO_FORMAT_MASK_AV1);
+        }
 
 #ifdef Q_OS_DARWIN
         {
@@ -887,6 +882,14 @@ bool Session::initialize()
     switch (m_Preferences->windowMode)
     {
     default:
+        // Normally we'd default to fullscreen desktop when starting in windowed
+        // mode, but in the case of a slow GPU, we want to use real fullscreen
+        // to allow the display to assist with the video scaling work.
+        if (WMUtils::isGpuSlow()) {
+            m_FullScreenFlag = SDL_WINDOW_FULLSCREEN;
+            break;
+        }
+        // Fall-through
     case StreamingPreferences::WM_FULLSCREEN_DESKTOP:
         // Only use full-screen desktop mode if we're running a desktop environment
         if (WMUtils::isRunningDesktopEnvironment()) {
@@ -940,37 +943,16 @@ bool Session::initialize()
         return false;
     }
 
-    if (m_Preferences->configurationWarnings) {
-        // Display launch warnings in Qt only after destroying SDL's window.
-        // This avoids conflicts between the windows on display subsystems
-        // such as KMSDRM that only support a single window.
-        for (const auto &text : m_LaunchWarnings) {
-            // Emit the warning to the UI
-            emit displayLaunchWarning(text);
-
-            // Wait a little bit so the user can actually read what we just said.
-            // This wait is a little longer than the actual toast timeout (3 seconds)
-            // to allow it to transition off the screen before continuing.
-            uint32_t start = SDL_GetTicks();
-            while (!SDL_TICKS_PASSED(SDL_GetTicks(), start + 3500)) {
-                SDL_Delay(5);
-
-                if (!m_ThreadedExec) {
-                    // Pump the UI loop while we wait if we're on the main thread
-                    QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-                    QCoreApplication::sendPostedEvents();
-                }
-            }
-        }
-    }
-
     return true;
 }
 
 void Session::emitLaunchWarning(QString text)
 {
-    // Queue this launch warning to be displayed after validation
-    m_LaunchWarnings.append(text);
+    if (m_Preferences->configurationWarnings) {
+        // Queue this launch warning to be displayed after validation
+        m_LaunchWarnings.append(text);
+        emit launchWarningsChanged();
+    }
 }
 
 bool Session::validateLaunch(SDL_Window* testWindow)
@@ -999,7 +981,8 @@ bool Session::validateLaunch(SDL_Window* testWindow)
             // check below.
             m_SupportedVideoFormats.removeByMask(VIDEO_FORMAT_MASK_AV1);
         }
-        else if (!m_Preferences->enableHdr && // HDR is checked below
+        else {
+            if (!m_Preferences->enableHdr && // HDR is checked below
                  m_Preferences->videoDecoderSelection == StreamingPreferences::VDS_AUTO && // Force hardware decoding checked below
                  m_Preferences->videoCodecConfig != StreamingPreferences::VCC_AUTO && // Auto VCC is already checked in initialize()
                  getDecoderAvailability(testWindow,
@@ -1008,7 +991,12 @@ bool Session::validateLaunch(SDL_Window* testWindow)
                                         m_StreamConfig.width,
                                         m_StreamConfig.height,
                                         m_StreamConfig.fps) != DecoderAvailability::Hardware) {
-            emitLaunchWarning(tr("Using software decoding due to your selection to force AV1 without GPU support. This may cause poor streaming performance."));
+                emitLaunchWarning(tr("Using software decoding due to your selection to force AV1 without GPU support. This may cause poor streaming performance."));
+            }
+
+            if (m_Preferences->videoCodecConfig == StreamingPreferences::VCC_FORCE_AV1) {
+                m_SupportedVideoFormats.removeByMask(~VIDEO_FORMAT_MASK_AV1);
+            }
         }
     }
 
@@ -1023,7 +1011,8 @@ bool Session::validateLaunch(SDL_Window* testWindow)
             // check below.
             m_SupportedVideoFormats.removeByMask(VIDEO_FORMAT_MASK_H265);
         }
-        else if (!m_Preferences->enableHdr && // HDR is checked below
+        else {
+            if (!m_Preferences->enableHdr && // HDR is checked below
                  m_Preferences->videoDecoderSelection == StreamingPreferences::VDS_AUTO && // Force hardware decoding checked below
                  m_Preferences->videoCodecConfig != StreamingPreferences::VCC_AUTO && // Auto VCC is already checked in initialize()
                  getDecoderAvailability(testWindow,
@@ -1032,11 +1021,16 @@ bool Session::validateLaunch(SDL_Window* testWindow)
                                         m_StreamConfig.width,
                                         m_StreamConfig.height,
                                         m_StreamConfig.fps) != DecoderAvailability::Hardware) {
-            emitLaunchWarning(tr("Using software decoding due to your selection to force HEVC without GPU support. This may cause poor streaming performance."));
+                emitLaunchWarning(tr("Using software decoding due to your selection to force HEVC without GPU support. This may cause poor streaming performance."));
+            }
+
+            if (m_Preferences->videoCodecConfig == StreamingPreferences::VCC_FORCE_HEVC) {
+                m_SupportedVideoFormats.removeByMask(~VIDEO_FORMAT_MASK_H265);
+            }
         }
     }
 
-    if (!(m_SupportedVideoFormats & VIDEO_FORMAT_MASK_H265) &&
+    if (!(m_SupportedVideoFormats & ~VIDEO_FORMAT_MASK_H264) &&
             m_Preferences->videoDecoderSelection == StreamingPreferences::VDS_AUTO &&
             getDecoderAvailability(testWindow,
                                    m_Preferences->videoDecoderSelection,
@@ -1265,8 +1259,7 @@ private:
         // Only quit the running app if our session terminated gracefully
         bool shouldQuit =
                 !m_Session->m_UnexpectedTermination &&
-                (m_Session->m_Preferences->quitAppAfter ||
-                 m_Session->m_ShouldExitAfterQuit);
+                m_Session->m_Preferences->quitAppAfter;
 
         // Notify the UI
         if (shouldQuit) {
@@ -1295,13 +1288,13 @@ private:
             } catch (const QtNetworkReplyException&) {
             }
 
-            // Exit the entire program if requested
-            if (m_Session->m_ShouldExitAfterQuit) {
-                QCoreApplication::instance()->quit();
-            }
-
             // Session is finished now
             emit m_Session->sessionFinished(m_Session->m_PortTestResults);
+        }
+
+        // Exit the entire program if requested
+        if (m_Session->m_ShouldExit) {
+            QCoreApplication::instance()->quit();
         }
     }
 
@@ -1415,19 +1408,33 @@ void Session::updateOptimalWindowDisplayMode()
         return;
     }
 
-    // Start with the native desktop resolution and try to find
-    // the highest refresh rate that our stream FPS evenly divides.
+    // On devices with slow GPUs, we will try to match the display mode
+    // to the video stream to offload the scaling work to the display.
+    //
+    // We also try to match the video resolution if we're using KMSDRM,
+    // because scaling on the display is generally higher quality than
+    // scaling performed by drmModeSetPlane().
+    bool matchVideo;
+    if (!Utils::getEnvironmentVariableOverride("MATCH_DISPLAY_MODE_TO_VIDEO", &matchVideo)) {
+        matchVideo = WMUtils::isGpuSlow() || QString(SDL_GetCurrentVideoDriver()) == "KMSDRM";
+    }
+
     bestMode = desktopMode;
     bestMode.refresh_rate = 0;
-    for (int i = 0; i < SDL_GetNumDisplayModes(displayIndex); i++) {
-        if (SDL_GetDisplayMode(displayIndex, i, &mode) == 0) {
-            if (mode.w == desktopMode.w && mode.h == desktopMode.h &&
+    if (!matchVideo) {
+        // Start with the native desktop resolution and try to find
+        // the highest refresh rate that our stream FPS evenly divides.
+        int numDisplayModes = SDL_GetNumDisplayModes(displayIndex);
+        for (int i = 0; i < numDisplayModes; i++) {
+            if (SDL_GetDisplayMode(displayIndex, i, &mode) == 0) {
+                if (mode.w == desktopMode.w && mode.h == desktopMode.h &&
                     mode.refresh_rate % m_StreamConfig.fps == 0) {
-                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                            "Found display mode with desktop resolution: %dx%dx%d",
-                            mode.w, mode.h, mode.refresh_rate);
-                if (mode.refresh_rate > bestMode.refresh_rate) {
-                    bestMode = mode;
+                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                "Found display mode with desktop resolution: %dx%dx%d",
+                                mode.w, mode.h, mode.refresh_rate);
+                    if (mode.refresh_rate > bestMode.refresh_rate) {
+                        bestMode = mode;
+                    }
                 }
             }
         }
@@ -1441,7 +1448,8 @@ void Session::updateOptimalWindowDisplayMode()
     if (bestMode.refresh_rate == 0) {
         float bestModeAspectRatio = 0;
         float videoAspectRatio = (float)m_ActiveVideoWidth / (float)m_ActiveVideoHeight;
-        for (int i = 0; i < SDL_GetNumDisplayModes(displayIndex); i++) {
+        int numDisplayModes = SDL_GetNumDisplayModes(displayIndex);
+        for (int i = 0; i < numDisplayModes; i++) {
             if (SDL_GetDisplayMode(displayIndex, i, &mode) == 0) {
                 float modeAspectRatio = (float)mode.w / (float)mode.h;
                 if (mode.w >= m_ActiveVideoWidth && mode.h >= m_ActiveVideoHeight &&
@@ -1557,10 +1565,6 @@ public:
 // Called in a non-main thread
 bool Session::startConnectionAsync()
 {
-    // Wait 1.5 seconds before connecting to let the user
-    // have time to read any messages present on the segue
-    SDL_Delay(1500);
-
     // The UI should have ensured the old game was already quit
     // if we decide to stream a different game.
     Q_ASSERT(m_Computer->currentGameId == 0 ||
@@ -1572,7 +1576,7 @@ bool Session::startConnectionAsync()
         // the chosen resolution. Avoid that by disabling SOPS when it
         // is not streaming a supported resolution.
         enableGameOptimizations = false;
-        for (const NvDisplayMode &mode : m_Computer->displayModes) {
+        for (const NvDisplayMode &mode : std::as_const(m_Computer->displayModes)) {
             if (mode.width == m_StreamConfig.width &&
                     mode.height == m_StreamConfig.height) {
                 SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
@@ -1609,8 +1613,8 @@ bool Session::startConnectionAsync()
         return false;
     }
 
-    QByteArray hostnameStr = m_Computer->activeAddress.address().toLatin1();
-    QByteArray siAppVersion = m_Computer->appVersion.toLatin1();
+    QByteArray hostnameStr = m_Computer->activeAddress.address().toUtf8();
+    QByteArray siAppVersion = m_Computer->appVersion.toUtf8();
 
     SERVER_INFORMATION hostInfo;
     hostInfo.address = hostnameStr.data();
@@ -1620,7 +1624,7 @@ bool Session::startConnectionAsync()
     // Older GFE versions didn't have this field
     QByteArray siGfeVersion;
     if (!m_Computer->gfeVersion.isEmpty()) {
-        siGfeVersion = m_Computer->gfeVersion.toLatin1();
+        siGfeVersion = m_Computer->gfeVersion.toUtf8();
     }
     if (!siGfeVersion.isEmpty()) {
         hostInfo.serverInfoGfeVersion = siGfeVersion.data();
@@ -1629,7 +1633,7 @@ bool Session::startConnectionAsync()
     // Older GFE and Sunshine versions didn't have this field
     QByteArray rtspSessionUrlStr;
     if (!rtspSessionUrl.isEmpty()) {
-        rtspSessionUrlStr = rtspSessionUrl.toLatin1();
+        rtspSessionUrlStr = rtspSessionUrl.toUtf8();
         hostInfo.rtspSessionUrl = rtspSessionUrlStr.data();
     }
 
@@ -1715,9 +1719,17 @@ void Session::flushWindowEvents()
     SDL_PushEvent(&flushEvent);
 }
 
-void Session::setShouldExitAfterQuit()
+void Session::setShouldExit(bool quitHostApp)
 {
-    m_ShouldExitAfterQuit = true;
+    // If the caller has explicitly asked us to quit the host app,
+    // override whatever the preferences say and do it. If the
+    // caller doesn't override to force quit, let the preferences
+    // dictate what we do.
+    if (quitHostApp) {
+        m_Preferences->quitAppAfter = true;
+    }
+
+    m_ShouldExit = true;
 }
 
 void Session::updateClientDisplayCount(int count)
@@ -1740,72 +1752,8 @@ void Session::updateClientDisplayCount(int count)
     m_ComputerManager->clientSideAttributeUpdated(m_Computer);
 }
 
-class ExecThread : public QThread
+void Session::start()
 {
-public:
-    ExecThread(Session* session) :
-        QThread(nullptr),
-        m_Session(session)
-    {
-        setObjectName("Session Exec");
-    }
-
-    void run() override
-    {
-        m_Session->execInternal();
-    }
-
-    Session* m_Session;
-};
-
-void Session::exec(QWindow* qtWindow)
-{
-    m_QtWindow = qtWindow;
-
-    // Use a separate thread for the streaming session on X11 or Wayland
-    // to ensure we don't stomp on Qt's GL context. This breaks when using
-    // the Qt EGLFS backend, so we will restrict this to X11
-    m_ThreadedExec = WMUtils::isRunningX11() || WMUtils::isRunningWayland();
-
-    if (m_ThreadedExec) {
-        // Run the streaming session on a separate thread for Linux/BSD
-        ExecThread execThread(this);
-        execThread.start();
-
-        // Until the SDL streaming window is created, we should continue
-        // to update the Qt UI to allow warning messages to display and
-        // make sure that the Qt window can hide itself.
-        while (!execThread.wait(10) && m_Window == nullptr) {
-            QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-            QCoreApplication::sendPostedEvents();
-        }
-        QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-        QCoreApplication::sendPostedEvents();
-
-        // SDL is in charge now. Wait until the streaming thread exits
-        // to further update the Qt window.
-        execThread.wait();
-    }
-    else {
-        // Run the streaming session on the main thread for Windows and macOS
-        execInternal();
-    }
-}
-
-void Session::execInternal()
-{
-    // Complete initialization in this deferred context to avoid
-    // calling expensive functions in the constructor (during the
-    // process of loading the StreamSegue).
-    //
-    // NB: This initializes the SDL video subsystem, so it must be
-    // called on the main thread.
-    if (!initialize()) {
-        emit sessionFinished(0);
-        emit readyForDeletion();
-        return;
-    }
-
     // Wait for any old session to finish cleanup
     s_ActiveSessionSemaphore.acquire();
 
@@ -1820,27 +1768,27 @@ void Session::execInternal()
                                          UserKeyComboManager::instance().runtimeCombos(),
                                          m_Computer ? m_Computer->clientDisplayCount : 1);
 
-    AsyncConnectionStartThread asyncConnThread(this);
-    if (!m_ThreadedExec) {
-        // Kick off the async connection thread while we sit here and pump the event loop
-        asyncConnThread.start();
-        while (!asyncConnThread.wait(10)) {
-            QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-            QCoreApplication::sendPostedEvents();
-        }
+    // Kick off the async connection thread then return to the caller to pump the event loop
+    auto thread = new AsyncConnectionStartThread(this);
+    QObject::connect(thread, &QThread::finished, this, &Session::exec);
+    QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+    thread->start();
+}
 
-        // Pump the event loop one last time to ensure we pick up any events from
-        // the thread that happened while it was in the final successful QThread::wait().
-        QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-        QCoreApplication::sendPostedEvents();
-    }
-    else {
-        // We're already in a separate thread so run the connection operations
-        // synchronously and don't pump the event loop. The main thread is already
-        // pumping the event loop for us.
-        asyncConnThread.run();
-    }
+void Session::interrupt()
+{
+    // Stop any connection in progress
+    LiInterruptConnection();
 
+    // Inject a quit event to our SDL event loop
+    SDL_Event event;
+    event.type = SDL_QUIT;
+    event.quit.timestamp = SDL_GetTicks();
+    SDL_PushEvent(&event);
+}
+
+void Session::exec()
+{
     // If the connection failed, clean up and abort the connection.
     if (!m_AsyncConnectionSuccess) {
         delete m_InputHandler;
@@ -1849,6 +1797,12 @@ void Session::execInternal()
         QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
         return;
     }
+
+    // Pump the Qt event loop one last time before we create our SDL window
+    // This is sometimes necessary for the QML code to process any signals
+    // we've emitted from the async connection thread.
+    QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+    QCoreApplication::sendPostedEvents();
 
     int x, y, width, height;
     getWindowDimensions(x, y, width, height);
@@ -1864,6 +1818,10 @@ void Session::execInternal()
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+
+    // Disable depth and stencil buffers
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
 
     // We always want a resizable window with High DPI enabled
     Uint32 defaultWindowFlags = SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE;
@@ -1928,38 +1886,6 @@ void Session::execInternal()
         }
     }
 
-    // HACK: Remove once proper Dark Mode support lands in SDL
-#ifdef Q_OS_WIN32
-    if (m_QtWindow != nullptr) {
-        BOOL darkModeEnabled;
-
-        // Query whether dark mode is enabled for our Qt window (which tracks the OS dark mode state)
-        if (FAILED(DwmGetWindowAttribute((HWND)m_QtWindow->winId(), DWMWA_USE_IMMERSIVE_DARK_MODE, &darkModeEnabled, sizeof(darkModeEnabled))) &&
-            FAILED(DwmGetWindowAttribute((HWND)m_QtWindow->winId(), DWMWA_USE_IMMERSIVE_DARK_MODE_OLD, &darkModeEnabled, sizeof(darkModeEnabled)))) {
-            darkModeEnabled = FALSE;
-        }
-
-        SDL_SysWMinfo info;
-        SDL_VERSION(&info.version);
-
-        if (SDL_GetWindowWMInfo(m_Window, &info) && info.subsystem == SDL_SYSWM_WINDOWS) {
-            // If dark mode is enabled, propagate that to our SDL window
-            if (darkModeEnabled) {
-                if (FAILED(DwmSetWindowAttribute(info.info.win.window, DWMWA_USE_IMMERSIVE_DARK_MODE, &darkModeEnabled, sizeof(darkModeEnabled)))) {
-                    DwmSetWindowAttribute(info.info.win.window, DWMWA_USE_IMMERSIVE_DARK_MODE_OLD, &darkModeEnabled, sizeof(darkModeEnabled));
-                }
-
-                // Toggle non-client rendering off and back on to ensure dark mode takes effect on Windows 10.
-                // DWM doesn't seem to correctly invalidate the non-client area after enabling dark mode.
-                DWMNCRENDERINGPOLICY ncPolicy = DWMNCRP_DISABLED;
-                DwmSetWindowAttribute(info.info.win.window, DWMWA_NCRENDERING_POLICY, &ncPolicy, sizeof(ncPolicy));
-                ncPolicy = DWMNCRP_ENABLED;
-                DwmSetWindowAttribute(info.info.win.window, DWMWA_NCRENDERING_POLICY, &ncPolicy, sizeof(ncPolicy));
-            }
-        }
-    }
-#endif
-
     m_InputHandler->setWindow(m_Window);
 
     QSvgRenderer svgIconRenderer(QString(":/res/moonlight.svg"));
@@ -1995,24 +1921,24 @@ void Session::execInternal()
     bool needsFirstEnterCapture = false;
     bool needsPostDecoderCreationCapture = false;
 
-    // HACK: For Wayland, we wait until we get the first SDL_WINDOWEVENT_ENTER
-    // event where it seems to work consistently on GNOME. For other platforms,
-    // especially where SDL may call SDL_RecreateWindow(), we must only capture
-    // after the decoder is created.
-    if (strcmp(SDL_GetCurrentVideoDriver(), "wayland") == 0) {
-        // Native Wayland: Capture on SDL_WINDOWEVENT_ENTER
-        needsFirstEnterCapture = true;
+    // Avoid capturing the mouse initially for windowed relative mode.
+    // We still capture in windowed absolute mode because it doesn't
+    // constrain the motion of the cursor. This allows the user to
+    // easily reposition or resize the window.
+    if (m_IsFullScreen || m_Preferences->absoluteMouseMode) {
+        // HACK: For Wayland, we wait until we get the first SDL_WINDOWEVENT_ENTER
+        // event where it seems to work consistently on GNOME. For other platforms,
+        // especially where SDL may call SDL_RecreateWindow(), we must only capture
+        // after the decoder is created.
+        if (strcmp(SDL_GetCurrentVideoDriver(), "wayland") == 0) {
+            // Native Wayland: Capture on SDL_WINDOWEVENT_ENTER
+            needsFirstEnterCapture = true;
+        }
+        else {
+            // X11/XWayland: Capture after decoder creation
+            needsPostDecoderCreationCapture = true;
+        }
     }
-    else {
-        // X11/XWayland: Capture after decoder creation
-        needsPostDecoderCreationCapture = true;
-    }
-
-    // Stop text input. SDL enables it by default
-    // when we initialize the video subsystem, but this
-    // causes an IME popup when certain keys are held down
-    // on macOS.
-    SDL_StopTextInput();
 
     // Disable the screen saver if requested
     if (m_Preferences->keepAwake) {
@@ -2040,6 +1966,9 @@ void Session::execInternal()
 
     // Toggle the stats overlay if requested by the user
     m_OverlayManager.setOverlayState(Overlay::OverlayDebug, m_Preferences->showPerformanceOverlay);
+
+    // Switch to async logging mode when we enter the SDL loop
+    StreamUtils::enterAsyncLoggingMode();
 
     // Hijack this thread to be the SDL main thread. We have to do this
     // because we want to suspend all Qt processing until the stream is over.
@@ -2244,7 +2173,6 @@ void Session::execInternal()
 
             // Fall through
         case SDL_RENDER_DEVICE_RESET:
-        case SDL_RENDER_TARGETS_RESET:
 
             if (event.type != SDL_WINDOWEVENT) {
                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
@@ -2272,10 +2200,9 @@ void Session::execInternal()
 
             // Now that the old decoder is dead, flush any events it may
             // have queued to reset itself (if this reset was the result
-            // of state loss).
+            // of device loss or an internal error).
             SDL_PumpEvents();
             SDL_FlushEvent(SDL_RENDER_DEVICE_RESET);
-            SDL_FlushEvent(SDL_RENDER_TARGETS_RESET);
 
             {
                 // If the stream exceeds the display refresh rate (plus some slack),
@@ -2390,6 +2317,9 @@ void Session::execInternal()
     }
 
 DispatchDeferredCleanup:
+    // Switch back to synchronous logging mode
+    StreamUtils::exitAsyncLoggingMode();
+
     // Uncapture the mouse and hide the window immediately,
     // so we can return to the Qt GUI ASAP.
     m_InputHandler->setCaptureActive(false);

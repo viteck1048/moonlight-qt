@@ -74,14 +74,55 @@ static int __riscv_hwprobe(struct riscv_hwprobe *pairs, size_t pair_count,
 
 Uint32 StreamUtils::getPlatformWindowFlags()
 {
-#if defined(Q_OS_DARWIN)
-    return SDL_WINDOW_METAL;
-#elif defined(HAVE_LIBPLACEBO_VULKAN)
+#if defined(HAVE_LIBPLACEBO_VULKAN)
     // We'll fall back to GL if Vulkan fails
     return SDL_WINDOW_VULKAN;
+#elif defined(Q_OS_DARWIN)
+    // Vulkan needs to supersede Metal, otherwise the Vulkan library won't be loaded
+    return SDL_WINDOW_METAL;
 #else
     return 0;
 #endif
+}
+
+SDL_Window* StreamUtils::createTestWindow()
+{
+    SDL_Window* testWindow;
+    Uint32 baseFlags = 0;
+
+    // Stop text input before creating the test window to avoid sdl2-compat
+    // starting text input on the new window. This might trigger the IME to
+    // be displayed.
+    SDL_StopTextInput();
+
+    // Test windows are always hidden
+    baseFlags |= SDL_WINDOW_HIDDEN;
+
+    // Creating a Vulkan surface with KMSDRM requires finding a display mode
+    // that exactly matches the window size. This is not always possible,
+    // particularly with drivers (Nvidia) that only expose modes matching
+    // the current resolution (only differing by refresh rate). Fullscreen
+    // desktop mode ensures the window size exactly matches the display mode
+    // which prevents false Vulkan renderer failures during decoder probing.
+    if (QString(SDL_GetCurrentVideoDriver()) == "KMSDRM") {
+        baseFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    }
+
+    // Try to add the platform-specific flags first and fall back if that fails
+    testWindow = SDL_CreateWindow("", 0, 0, 1280, 720,
+                                  baseFlags | StreamUtils::getPlatformWindowFlags());
+    if (!testWindow) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Failed to create test window with platform flags: %s",
+                    SDL_GetError());
+
+        testWindow = SDL_CreateWindow("", 0, 0, 1280, 720, baseFlags);
+        if (!testWindow) {
+            return nullptr;
+        }
+    }
+
+    return testWindow;
 }
 
 void StreamUtils::scaleSourceToDestinationSurface(SDL_Rect* src, SDL_Rect* dst)
@@ -220,7 +261,7 @@ bool StreamUtils::getNativeDesktopMode(int displayIndex, SDL_DisplayMode* mode, 
     CGDirectDisplayID displayIds[MAX_DISPLAYS];
     uint32_t displayCount = 0;
     CGGetActiveDisplayList(MAX_DISPLAYS, displayIds, &displayCount);
-    if (displayIndex >= displayCount) {
+    if (displayIndex >= (int)displayCount) {
         return false;
     }
 
@@ -416,4 +457,16 @@ int StreamUtils::getDrmFd(bool preferRenderNode)
 #endif
 
     return -1;
+}
+
+extern QAtomicInt g_AsyncLoggingEnabled;
+
+void StreamUtils::enterAsyncLoggingMode()
+{
+    g_AsyncLoggingEnabled.ref();
+}
+
+void StreamUtils::exitAsyncLoggingMode()
+{
+    g_AsyncLoggingEnabled.deref();
 }

@@ -1360,10 +1360,10 @@ Flickable {
                             text: "Português" // Portuguese
                             val: StreamingPreferences.LANG_PT
                         }
-                        /* ListElement {
+                        ListElement {
                             text: "Português do Brasil" // Brazilian Portuguese
                             val: StreamingPreferences.LANG_PT_BR
-                        } */
+                        }
                         ListElement {
                             text: "Ελληνικά" // Greek
                             val: StreamingPreferences.LANG_EL
@@ -2131,6 +2131,7 @@ Flickable {
                                 width: parent.width
                                 text: qsTr("Ctrl + Alt + Shift + Q\nQuit streaming session (game keeps running on host)\n\n") +
                                       qsTr("Ctrl + Alt + Shift + Z\nToggle mouse/keyboard capture\n\n") +
+                                      qsTr("Ctrl + Alt + Shift + K\nToggle system key capture (keyboard grab) - passes shortcuts like Super/Win and Alt+F4 to the host; desktop environment only\n\n") +
                                       qsTr("Ctrl + Alt + Shift + X\nToggle fullscreen/windowed\n\n") +
                                       qsTr("Ctrl + Alt + Shift + S\nShow performance overlay (unsupported on Steam Link or Raspberry Pi)\n\n") +
                                       qsTr("Ctrl + Alt + Shift + M\nToggle mouse mode (capture vs. direct) - deactivates custom remaps\n\n") +
