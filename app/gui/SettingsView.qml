@@ -1348,10 +1348,10 @@ Flickable {
                             text: "Türkçe" // Turkish
                             val: StreamingPreferences.LANG_TR
                         }
-                        /* ListElement {
+                        ListElement {
                             text: "Українська" // Ukrainian
                             val: StreamingPreferences.LANG_UK
-                        } */
+                        }
                         ListElement {
                             text: "繁體中文" // Traditional Chinese
                             val: StreamingPreferences.LANG_ZH_TW
