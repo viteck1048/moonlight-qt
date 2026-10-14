@@ -20,6 +20,7 @@ Flickable {
     property var keymapCombos: []
     property var modifierOptions: []
     property string keymapEditorStatus: ""
+    property bool keymapEditorStatusFailed: false
     property bool suppressAutoScroll: false
 
     readonly property real standardContentWidth: Math.max(settingsColumn1.width, settingsColumn2.width)
@@ -226,18 +227,22 @@ Flickable {
     function reloadKeymapCombos() {
         if (keymapBridge.reloadCombos()) {
             loadKeymapCombos()
+            keymapEditorStatusFailed = false
             keymapEditorStatus = qsTr("Combos reloaded")
         }
         else {
+            keymapEditorStatusFailed = true
             keymapEditorStatus = qsTr("Reload failed")
         }
     }
 
     function saveKeymapCombos() {
         if (keymapBridge.saveCombos(keymapCombos)) {
+            keymapEditorStatusFailed = false
             keymapEditorStatus = qsTr("Combos saved")
         }
         else {
+            keymapEditorStatusFailed = true
             keymapEditorStatus = qsTr("Save failed")
         }
     }
@@ -1627,14 +1632,13 @@ Flickable {
                                   qsTr("You can toggle this while streaming using Ctrl+Alt+Shift+L.")
                 }
 
-                RowLayout {
-                    spacing: 5
+                Column {
                     width: parent.width
 
                     CheckBox {
                         id: userCombosEnabledCheck
                         hoverEnabled: true
-                        Layout.fillWidth: true
+                        width: parent.width
                         text: qsTr("Enable custom keyboard combos from keymap.xml")
                         font.pointSize: 12
                         checked: StreamingPreferences.userCombosEnabled
@@ -1649,6 +1653,7 @@ Flickable {
 
                     Button {
                         id: keymapSettingsToggle
+                        x: parent.width - width
                         text: settingsPage.keymapEditorActive ? qsTr("Hide custom hotkeys") : qsTr("Custom hotkeys")
                         font.pointSize: 12
                         onClicked: settingsPage.keymapEditorActive ? settingsPage.showStandardSettings() : settingsPage.showKeymapEditor()
@@ -1662,13 +1667,13 @@ Flickable {
                     }
                 }
 
-                Row {
-                    spacing: 5
+                Column {
                     width: parent.width
 
                     CheckBox {
                         id: captureSysKeysCheck
                         hoverEnabled: true
+                        width: parent.width
                         text: qsTr("Capture system keyboard shortcuts")
                         font.pointSize: 12
                         enabled: SystemProperties.hasDesktopEnvironment
@@ -1682,6 +1687,7 @@ Flickable {
                     }
 
                     AutoResizingComboBox {
+                        x: parent.width - width
                         // ignore setting the index at first, and actually set it when the component is loaded
                         Component.onCompleted: {
                             if (!visible) {
@@ -2144,22 +2150,24 @@ Flickable {
             padding: 12
 
             Rectangle {
-                width: parent.width
-                implicitHeight: 850
+                width: parent.width - 2 * parent.padding
+                // висота за вмістом: більший із двох секторів (лівий — текст, правий — комбінації)
+                height: Math.max(keymapHelpColumn.implicitHeight + 20, keymapCombosColumn.implicitHeight) + 20
                 color: "#202020"
                 radius: 6
                 border.color: "#3a3a3a"
                 border.width: 1
 
                 Row {
-                    width: parent.width
-                    height: parent.height
+                    x: 10
+                    y: 10
+                    width: parent.width - 20
+                    height: parent.height - 20
                     spacing: 10
-                    anchors.margins: 10
 
                     // Left side - Static instructions
                     Rectangle {
-                        width: parent.width * 0.4
+                        width: (parent.width - parent.spacing) * 0.4
                         height: parent.height
                         color: '#2a2a2a'
                         border.color: '#444444'
@@ -2167,8 +2175,10 @@ Flickable {
                         radius: 4
 
                         Column {
+                            id: keymapHelpColumn
+                            x: 10
+                            y: 10
                             width: parent.width - 20
-                            anchors.centerIn: parent
                             spacing: 8
 
                             Label {
@@ -2211,11 +2221,10 @@ Flickable {
                         }
                     }
 
-                    // Right side - Dynamic combos
-                    ScrollView {
-                        width: parent.width * 0.6
+                    // Right side - Dynamic combos (grows freely; the settings page scrolls as a whole)
+                    Item {
+                        width: (parent.width - parent.spacing) * 0.6
                         height: parent.height
-                        clip: true
 
                         Column {
                             id: keymapCombosColumn
@@ -2354,7 +2363,7 @@ Flickable {
 
                                                 TextField {
                                                     id: outputKeyField
-                                                    width: parent.width - 100 - 10 - 50
+                                                    width: parent.width - 100 - 2 * parent.spacing - removeOutputButton.width
                                                     text: comboKeyTokenString(comboIndex, "output", outputIndex)
                                                     placeholderText: qsTr("e.g., KMOD_CTRL+KMOD_ALT+SDL_SCANCODE_Q")
                                                     readOnly: comboData ? (comboData.autoDetectMode || false) : false
@@ -2378,8 +2387,8 @@ Flickable {
                                                 }
 
                                                 Button {
+                                                    id: removeOutputButton
                                                     text: qsTr("Remove")
-                                                    width: 50
                                                     onClicked: removeComboOutput(comboIndex, outputIndex)
                                                 }
                                             }
@@ -2387,7 +2396,6 @@ Flickable {
 
                                         Button {
                                             text: qsTr("Add output")
-                                            width: 100
                                             onClicked: addComboOutput(comboIndex)
                                         }
                                     }
@@ -2426,7 +2434,7 @@ Flickable {
                 Label {
                     text: keymapEditorStatus
                     font.pointSize: 11
-                    color: keymapEditorStatus.indexOf("failed") >= 0 ? "#e57373" : "#a5d6a7"
+                    color: keymapEditorStatusFailed ? "#e57373" : "#a5d6a7"
                 }
             }
 
