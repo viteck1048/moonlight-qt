@@ -66,7 +66,7 @@
     <message>
         <location filename="../gui/CliPair.qml" line="12"/>
         <source>Pairing... Please enter &apos;%1&apos; on %2.</source>
-        <translation>Сполучення... Введіть &apos;%1&apos; на %2.</translation>
+        <translation>Сполучення... Введіть «%1» на %2.</translation>
     </message>
     <message>
         <location filename="../gui/CliPair.qml" line="81"/>
@@ -856,7 +856,7 @@
     <message>
         <location filename="../gui/SettingsView.qml" line="1217"/>
         <source>You must restart any game currently in progress for this setting to take effect</source>
-        <translation>Для застосування цього налаштування потрібно перезапустити поточну гру</translation>
+        <translation>Для застосування цього налаштування потрібно перезапустити гру</translation>
     </message>
     <message>
         <location filename="../gui/SettingsView.qml" line="1223"/>
@@ -931,7 +931,7 @@
     <message>
         <location filename="../gui/SettingsView.qml" line="1632"/>
         <source>You can toggle this while streaming using Ctrl+Alt+Shift+L.</source>
-        <translation>Ви можете перемикати це під час трансляції за допомогою Ctrl+Alt+Shift+L.</translation>
+        <translation>Можна перемкнути під час трансляції, натиснувши Ctrl+Alt+Shift+L.</translation>
     </message>
     <message>
         <location filename="../gui/SettingsView.qml" line="1642"/>
@@ -946,7 +946,7 @@
     <message>
         <location filename="../gui/SettingsView.qml" line="1651"/>
         <source>You can toggle this while streaming using Ctrl+Alt+Shift+U.</source>
-        <translation>Ви можете перемикати це під час трансляції за допомогою Ctrl+Alt+Shift+U.</translation>
+        <translation>Можна перемкнути під час трансляції, натиснувши Ctrl+Alt+Shift+U.</translation>
     </message>
     <message>
         <location filename="../gui/SettingsView.qml" line="1657"/>
@@ -1029,7 +1029,7 @@ Show performance overlay (unsupported on Steam Link or Raspberry Pi)
 
 </source>
         <translation>Ctrl + Alt + Shift + S
-Показати оверлей продуктивності (не підтримується на Steam Link або Raspberry Pi)
+Показати оверлей продуктивності (не підтримується на Steam Link та Raspberry Pi)
 
 </translation>
     </message>
@@ -1270,12 +1270,12 @@ Show/hide host pointer
     <message>
         <location filename="../gui/SettingsView.qml" line="2131"/>
         <source>You can toggle it at any time while streaming using Ctrl+Alt+Shift+S or Select+L1+R1+X.</source>
-        <translation>Ви можете перемикати це в будь-який момент під час трансляції за допомогою Ctrl+Alt+Shift+S або Select+L1+R1+X.</translation>
+        <translation>Можна перемкнути в будь-який момент під час трансляції, натиснувши Ctrl+Alt+Shift+S або Select+L1+R1+X.</translation>
     </message>
     <message>
         <location filename="../gui/SettingsView.qml" line="2132"/>
         <source>The performance overlay is not supported on Steam Link or Raspberry Pi.</source>
-        <translation>Оверлей продуктивності не підтримується на Steam Link або Raspberry Pi.</translation>
+        <translation>Оверлей продуктивності не підтримується на Steam Link та Raspberry Pi.</translation>
     </message>
     <message>
         <location filename="../gui/SettingsView.qml" line="1686"/>
@@ -1325,7 +1325,7 @@ Show/hide host pointer
     <message>
         <location filename="../gui/SettingsView.qml" line="1615"/>
         <source>You can toggle this while streaming using Ctrl+Alt+Shift+M.</source>
-        <translation>Ви можете перемикати це під час трансляції за допомогою Ctrl+Alt+Shift+M.</translation>
+        <translation>Можна перемкнути під час трансляції, натиснувши Ctrl+Alt+Shift+M.</translation>
     </message>
     <message>
         <location filename="../gui/SettingsView.qml" line="1837"/>
@@ -1386,7 +1386,7 @@ Show/hide host pointer
         <location filename="../gui/SettingsView.qml" line="780"/>
         <location filename="../gui/SettingsView.qml" line="890"/>
         <source>Custom (%1 FPS)</source>
-        <translation>Власна (%1 FPS)</translation>
+        <translation>Користувацька (%1 FPS)</translation>
     </message>
     <message>
         <location filename="../gui/SettingsView.qml" line="795"/>
