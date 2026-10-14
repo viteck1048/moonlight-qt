@@ -38,7 +38,7 @@
     <message>
         <location filename="../gui/AppView.qml" line="326"/>
         <source>Hide this game from the app grid. To access hidden games, right-click on the host and choose %1.</source>
-        <translation>Сховати цю гру зі списку ігор. Щоб побачити приховані ігри, клацніть правою кнопкою миші на хості й виберіть %1.</translation>
+        <translation>Приховати цю гру на екрані ігор. Щоб отримати доступ до прихованих ігор, клацніть правою кнопкою миші на хості та виберіть %1.</translation>
     </message>
     <message>
         <location filename="../gui/AppView.qml" line="326"/>
@@ -189,7 +189,7 @@
     <message>
         <location filename="../gui/computermodel.cpp" line="82"/>
         <source>Running Game ID: %1</source>
-        <translation>ID запущеної гри: %1</translation>
+        <translation>Наразі у грі з ID: %1</translation>
     </message>
     <message>
         <location filename="../gui/computermodel.cpp" line="83"/>
@@ -338,7 +338,7 @@
     <message>
         <location filename="../gui/PcView.qml" line="310"/>
         <source>Are you sure you want to remove &apos;%1&apos;?</source>
-        <translation>Справді видалити «%1»?</translation>
+        <translation>Ви дійсно бажаєте видалити «%1»?</translation>
     </message>
     <message>
         <location filename="../gui/PcView.qml" line="324"/>
@@ -672,314 +672,314 @@
         <translation>Налаштування</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="379"/>
+        <location filename="../gui/SettingsView.qml" line="384"/>
         <source>Resolution and FPS</source>
         <translation>Роздільна здатність та FPS</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="387"/>
+        <location filename="../gui/SettingsView.qml" line="392"/>
         <source>Setting values too high for your PC or network connection may cause lag, stuttering, or errors.</source>
         <translation>Завищені для вашого ПК чи мережі значення можуть спричинити затримки, підвисання або помилки.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="369"/>
+        <location filename="../gui/SettingsView.qml" line="374"/>
         <source>Basic Settings</source>
-        <translation>Основні налаштування</translation>
+        <translation>Базові налаштування</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="513"/>
+        <location filename="../gui/SettingsView.qml" line="518"/>
         <source>720p</source>
         <translation>720p</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="519"/>
+        <location filename="../gui/SettingsView.qml" line="524"/>
         <source>1080p</source>
         <translation>1080p</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="525"/>
+        <location filename="../gui/SettingsView.qml" line="530"/>
         <source>1440p</source>
         <translation>1440p</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="531"/>
+        <location filename="../gui/SettingsView.qml" line="536"/>
         <source>4K</source>
         <translation>4K</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="638"/>
+        <location filename="../gui/SettingsView.qml" line="643"/>
         <source>Custom resolutions are not officially supported by GeForce Experience, so it will not set your host display resolution. You will need to set it manually while in game.</source>
         <translation>GeForce Experience офіційно не підтримує власні роздільні здатності, тож не змінить роздільну здатність дисплея хоста. Її доведеться встановити вручну в грі.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="639"/>
+        <location filename="../gui/SettingsView.qml" line="644"/>
         <source>Resolutions that are not supported by your client or host PC may cause streaming errors.</source>
         <translation>Роздільні здатності, які не підтримує ваш клієнтський чи хост-ПК, можуть спричинити помилки трансляції.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="645"/>
+        <location filename="../gui/SettingsView.qml" line="650"/>
         <source>Enter a custom resolution:</source>
-        <translation>Введіть власну роздільну здатність:</translation>
+        <translation>Користувацька роздільна здатність:</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="867"/>
+        <location filename="../gui/SettingsView.qml" line="872"/>
         <source>%1 FPS</source>
         <translation>%1 FPS</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="935"/>
+        <location filename="../gui/SettingsView.qml" line="940"/>
         <source>Video bitrate:</source>
         <translation>Бітрейт відео:</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="943"/>
+        <location filename="../gui/SettingsView.qml" line="948"/>
         <source>Lower the bitrate on slower connections. Raise the bitrate to increase image quality.</source>
         <translation>Знижуйте бітрейт на повільному з&apos;єднанні. Підвищуйте бітрейт для кращої якості зображення.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="965"/>
+        <location filename="../gui/SettingsView.qml" line="970"/>
         <source>Video bitrate: %1 Mbps</source>
         <translation>Бітрейт відео: %1 Мбіт/с</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="995"/>
+        <location filename="../gui/SettingsView.qml" line="1000"/>
         <source>Display mode</source>
         <translation>Режим відображення</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1006"/>
-        <location filename="../gui/SettingsView.qml" line="1507"/>
+        <location filename="../gui/SettingsView.qml" line="1011"/>
+        <location filename="../gui/SettingsView.qml" line="1512"/>
         <source>Fullscreen</source>
         <translation>Повноекранний</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1075"/>
+        <location filename="../gui/SettingsView.qml" line="1080"/>
         <source>Fullscreen generally provides the best performance, but borderless windowed may work better with features like macOS Spaces, Alt+Tab, screenshot tools, on-screen overlays, etc.</source>
         <translation>Повноекранний режим зазвичай найпродуктивніший, але вікно без рамки може краще працювати з такими функціями, як macOS Spaces, Alt+Tab, програми для знімків екрана, екранні оверлеї тощо.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1011"/>
+        <location filename="../gui/SettingsView.qml" line="1016"/>
         <source>Borderless windowed</source>
         <translation>Безрамкове вікно</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="229"/>
+        <location filename="../gui/SettingsView.qml" line="231"/>
         <source>Combos reloaded</source>
         <translation>Комбінації перечитано</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="232"/>
+        <location filename="../gui/SettingsView.qml" line="235"/>
         <source>Reload failed</source>
         <translation>Не вдалося перечитати</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="238"/>
+        <location filename="../gui/SettingsView.qml" line="242"/>
         <source>Combos saved</source>
         <translation>Комбінації збережено</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="241"/>
+        <location filename="../gui/SettingsView.qml" line="246"/>
         <source>Save failed</source>
         <translation>Не вдалося зберегти</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="445"/>
+        <location filename="../gui/SettingsView.qml" line="450"/>
         <source>Native</source>
-        <translation>Рідна</translation>
+        <translation>Нативний</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="446"/>
+        <location filename="../gui/SettingsView.qml" line="451"/>
         <source>Native (Excluding Notch)</source>
-        <translation>Рідна (без вирізу)</translation>
+        <translation>Нативний (без вирізу)</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="981"/>
+        <location filename="../gui/SettingsView.qml" line="986"/>
         <source>Use Default (%1 Mbps)</source>
         <translation>Типовий (%1 Мбіт/с)</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1016"/>
-        <location filename="../gui/SettingsView.qml" line="1499"/>
+        <location filename="../gui/SettingsView.qml" line="1021"/>
+        <location filename="../gui/SettingsView.qml" line="1504"/>
         <source>Windowed</source>
         <translation>Віконний</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1025"/>
+        <location filename="../gui/SettingsView.qml" line="1030"/>
         <source>(Recommended)</source>
         <translation>(рекомендовано)</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1085"/>
+        <location filename="../gui/SettingsView.qml" line="1090"/>
         <source>V-Sync</source>
-        <translation>V-Sync</translation>
+        <translation>Вертикальна синхронізація</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1095"/>
+        <location filename="../gui/SettingsView.qml" line="1100"/>
         <source>Disabling V-Sync allows sub-frame rendering latency, but it can display visible tearing</source>
         <translation>Вимкнення V-Sync дає затримку рендерингу менше ніж за кадр, але можуть з&apos;явитися помітні розриви зображення</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1101"/>
+        <location filename="../gui/SettingsView.qml" line="1106"/>
         <source>Frame pacing</source>
         <translation>Рівномірна подача кадрів</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1111"/>
+        <location filename="../gui/SettingsView.qml" line="1116"/>
         <source>Frame pacing reduces micro-stutter by delaying frames that come in too early</source>
         <translation>Рівномірна подача кадрів зменшує мікрозаїкання, притримуючи кадри, що надійшли зарано</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1145"/>
+        <location filename="../gui/SettingsView.qml" line="1150"/>
         <source>Audio Settings</source>
         <translation>Налаштування звуку</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1180"/>
+        <location filename="../gui/SettingsView.qml" line="1185"/>
         <source>Stereo</source>
         <translation>Стерео</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1184"/>
+        <location filename="../gui/SettingsView.qml" line="1189"/>
         <source>5.1 surround sound</source>
         <translation>Об&apos;ємний звук 5.1</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1188"/>
+        <location filename="../gui/SettingsView.qml" line="1193"/>
         <source>7.1 surround sound</source>
         <translation>Об&apos;ємний звук 7.1</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1202"/>
+        <location filename="../gui/SettingsView.qml" line="1207"/>
         <source>Mute host PC speakers while streaming</source>
         <translation>Вимкнути звук динаміків хост-ПК під час трансляції</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1212"/>
+        <location filename="../gui/SettingsView.qml" line="1217"/>
         <source>You must restart any game currently in progress for this setting to take effect</source>
         <translation>Для застосування цього налаштування потрібно перезапустити поточну гру</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1218"/>
+        <location filename="../gui/SettingsView.qml" line="1223"/>
         <source>Mute audio stream when Moonlight is not the active window</source>
         <translation>Вимкнути звук трансляції, коли Moonlight не є активним вікном</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1229"/>
+        <location filename="../gui/SettingsView.qml" line="1234"/>
         <source>Mutes Moonlight&apos;s audio when you Alt+Tab out of the stream or click on a different window.</source>
         <translation>Вимикає звук Moonlight, коли ви виходите з трансляції через Alt+Tab або клацаєте на інше вікно.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1278"/>
+        <location filename="../gui/SettingsView.qml" line="1283"/>
         <source>UI Settings</source>
         <translation>Налаштування інтерфейсу</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1288"/>
+        <location filename="../gui/SettingsView.qml" line="1293"/>
         <source>Language</source>
         <translation>Мова</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1314"/>
+        <location filename="../gui/SettingsView.qml" line="1319"/>
         <source>Automatic</source>
         <translation>Автоматично</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1449"/>
+        <location filename="../gui/SettingsView.qml" line="1454"/>
         <source>You must restart Moonlight for this change to take effect</source>
         <translation>Для застосування цієї зміни потрібно перезапустити Moonlight</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1466"/>
+        <location filename="../gui/SettingsView.qml" line="1471"/>
         <source>GUI display mode</source>
         <translation>Режим відображення інтерфейсу</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1503"/>
+        <location filename="../gui/SettingsView.qml" line="1508"/>
         <source>Maximized</source>
-        <translation>Розгорнутий</translation>
+        <translation>Максимізований</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1531"/>
+        <location filename="../gui/SettingsView.qml" line="1536"/>
         <source>Show configuration warnings</source>
-        <translation>Показувати попередження конфігурації</translation>
+        <translation>Попередження конфігурації</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1588"/>
+        <location filename="../gui/SettingsView.qml" line="1593"/>
         <source>Input Settings</source>
         <translation>Налаштування введення</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1609"/>
+        <location filename="../gui/SettingsView.qml" line="1614"/>
         <source>This enables seamless mouse control without capturing the client&apos;s mouse cursor. It is ideal for remote desktop usage but will not work in most games.</source>
         <translation>Вмикає плавне керування мишею без захоплення курсора клієнта. Ідеально для роботи з віддаленим робочим столом, але не працюватиме в більшості ігор.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1611"/>
+        <location filename="../gui/SettingsView.qml" line="1616"/>
         <source>NOTE: Due to a bug in GeForce Experience, this option may not work properly if your host PC has multiple monitors.</source>
         <translation>ПРИМІТКА: Через помилку в GeForce Experience ця опція може не працювати належним чином, якщо до хост-ПК підключено кілька моніторів.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1618"/>
+        <location filename="../gui/SettingsView.qml" line="1623"/>
         <source>Lock pointer inside video region when capturing input</source>
         <translation>Утримувати курсор у межах відео під час захоплення введення</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1626"/>
+        <location filename="../gui/SettingsView.qml" line="1631"/>
         <source>Prevents the local mouse cursor from leaving the streaming window while Moonlight has captured input.</source>
         <translation>Не дає локальному курсору миші виходити за межі вікна трансляції, поки Moonlight захоплює введення.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1627"/>
+        <location filename="../gui/SettingsView.qml" line="1632"/>
         <source>You can toggle this while streaming using Ctrl+Alt+Shift+L.</source>
         <translation>Ви можете перемикати це під час трансляції за допомогою Ctrl+Alt+Shift+L.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1638"/>
+        <location filename="../gui/SettingsView.qml" line="1642"/>
         <source>Enable custom keyboard combos from keymap.xml</source>
-        <translation>Увімкнути власні комбінації клавіш з keymap.xml</translation>
+        <translation>Власні комбінації клавіш з keymap.xml</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1646"/>
+        <location filename="../gui/SettingsView.qml" line="1650"/>
         <source>Allows Moonlight to intercept configured key combinations and substitute custom outputs defined in keymap.xml.</source>
         <translation>Дозволяє Moonlight перехоплювати налаштовані комбінації клавіш і підставляти замість них власні, задані в keymap.xml.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1647"/>
+        <location filename="../gui/SettingsView.qml" line="1651"/>
         <source>You can toggle this while streaming using Ctrl+Alt+Shift+U.</source>
         <translation>Ви можете перемикати це під час трансляції за допомогою Ctrl+Alt+Shift+U.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1652"/>
+        <location filename="../gui/SettingsView.qml" line="1657"/>
         <source>Hide custom hotkeys</source>
         <translation>Сховати власні гарячі клавіші</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1652"/>
+        <location filename="../gui/SettingsView.qml" line="1657"/>
         <source>Custom hotkeys</source>
         <translation>Власні гарячі клавіші</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1660"/>
+        <location filename="../gui/SettingsView.qml" line="1665"/>
         <source>Return to streaming input settings</source>
         <translation>Повернутися до налаштувань введення</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1661"/>
+        <location filename="../gui/SettingsView.qml" line="1666"/>
         <source>Open keymap configuration view</source>
         <translation>Відкрити налаштування перепризначення клавіш</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1962"/>
+        <location filename="../gui/SettingsView.qml" line="1968"/>
         <source>AV1</source>
         <translation>AV1</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2175"/>
+        <location filename="../gui/SettingsView.qml" line="2185"/>
         <source>Built-in keyboard shortcuts</source>
         <translation>Вбудовані комбінації клавіш</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2191"/>
+        <location filename="../gui/SettingsView.qml" line="2201"/>
         <source>Ctrl + Alt + Shift + Q
 Quit streaming session (game keeps running on host)
 
@@ -990,7 +990,7 @@ Quit streaming session (game keeps running on host)
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2192"/>
+        <location filename="../gui/SettingsView.qml" line="2202"/>
         <source>Ctrl + Alt + Shift + Z
 Toggle mouse/keyboard capture
 
@@ -1001,7 +1001,7 @@ Toggle mouse/keyboard capture
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2193"/>
+        <location filename="../gui/SettingsView.qml" line="2203"/>
         <source>Ctrl + Alt + Shift + K
 Toggle system key capture (keyboard grab) - passes shortcuts like Super/Win and Alt+F4 to the host; desktop environment only
 
@@ -1012,7 +1012,7 @@ Toggle system key capture (keyboard grab) - passes shortcuts like Super/Win and 
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2194"/>
+        <location filename="../gui/SettingsView.qml" line="2204"/>
         <source>Ctrl + Alt + Shift + X
 Toggle fullscreen/windowed
 
@@ -1023,7 +1023,7 @@ Toggle fullscreen/windowed
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2195"/>
+        <location filename="../gui/SettingsView.qml" line="2205"/>
         <source>Ctrl + Alt + Shift + S
 Show performance overlay (unsupported on Steam Link or Raspberry Pi)
 
@@ -1034,7 +1034,7 @@ Show performance overlay (unsupported on Steam Link or Raspberry Pi)
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2196"/>
+        <location filename="../gui/SettingsView.qml" line="2206"/>
         <source>Ctrl + Alt + Shift + M
 Toggle mouse mode (capture vs. direct) - deactivates custom remaps
 
@@ -1045,7 +1045,7 @@ Toggle mouse mode (capture vs. direct) - deactivates custom remaps
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2197"/>
+        <location filename="../gui/SettingsView.qml" line="2207"/>
         <source>Ctrl + Alt + Shift + V
 Paste clipboard text on host
 
@@ -1056,7 +1056,7 @@ Paste clipboard text on host
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2198"/>
+        <location filename="../gui/SettingsView.qml" line="2208"/>
         <source>Ctrl + Alt + Shift + D
 Minimize stream window
 
@@ -1067,7 +1067,7 @@ Minimize stream window
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2199"/>
+        <location filename="../gui/SettingsView.qml" line="2209"/>
         <source>Ctrl + Alt + Shift + C
 Toggle local cursor visibility in desktop mouse mode
 
@@ -1078,7 +1078,7 @@ Toggle local cursor visibility in desktop mouse mode
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2200"/>
+        <location filename="../gui/SettingsView.qml" line="2210"/>
         <source>Ctrl + Alt + Shift + L
 Toggle pointer lock to video region (requires desktop mouse mode enabled)
 
@@ -1089,7 +1089,7 @@ Toggle pointer lock to video region (requires desktop mouse mode enabled)
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2201"/>
+        <location filename="../gui/SettingsView.qml" line="2211"/>
         <source>Ctrl + Alt + Shift + U
 Enable/disable custom key remaps
 
@@ -1100,7 +1100,7 @@ Enable/disable custom key remaps
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2202"/>
+        <location filename="../gui/SettingsView.qml" line="2212"/>
         <source>Ctrl + Alt + Shift + F1-F9
 Switch displays on host
 
@@ -1111,7 +1111,7 @@ Switch displays on host
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2203"/>
+        <location filename="../gui/SettingsView.qml" line="2213"/>
         <source>Ctrl + Alt + Shift + P
 Declare how many displays are attached on the host
 
@@ -1122,7 +1122,7 @@ Declare how many displays are attached on the host
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2204"/>
+        <location filename="../gui/SettingsView.qml" line="2214"/>
         <source>Ctrl + Alt + Shift + O
 Cycle to the next declared display (simulates the matching F-key)
 
@@ -1133,7 +1133,7 @@ Cycle to the next declared display (simulates the matching F-key)
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2205"/>
+        <location filename="../gui/SettingsView.qml" line="2215"/>
         <source>Ctrl + Alt + Shift + N
 Show/hide host pointer 
 
@@ -1144,7 +1144,7 @@ Show/hide host pointer
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2206"/>
+        <location filename="../gui/SettingsView.qml" line="2216"/>
         <source>Note: Switching to game mode with Ctrl+Alt+Shift+M disables custom remaps (+U) and enables pointer lock (+L).
 
 </source>
@@ -1153,382 +1153,382 @@ Show/hide host pointer
 </translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2207"/>
+        <location filename="../gui/SettingsView.qml" line="2217"/>
         <source>These shortcuts are hard-coded on client and host. Enter a replacement in the &apos;Input&apos; fields below and provide desired outputs in &apos;Out&apos; to override them.</source>
         <translation>Ці комбінації жорстко задані в клієнті та на хості. Щоб їх перевизначити, введіть заміну в полі «Вхід» нижче, а бажаний результат — у полях «Вихід».</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2249"/>
+        <location filename="../gui/SettingsView.qml" line="2258"/>
         <source>Combo #%1</source>
         <translation>Комбінація №%1</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2255"/>
+        <location filename="../gui/SettingsView.qml" line="2264"/>
         <source>Auto-detect mode</source>
         <translation>Режим авторозпізнавання</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2272"/>
+        <location filename="../gui/SettingsView.qml" line="2281"/>
         <source>Description:</source>
         <translation>Опис:</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2281"/>
+        <location filename="../gui/SettingsView.qml" line="2290"/>
         <source>e.g., My custom hotkey</source>
         <translation>напр., Моя гаряча клавіша</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2296"/>
+        <location filename="../gui/SettingsView.qml" line="2305"/>
         <source>Input:</source>
         <translation>Вхід:</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2305"/>
+        <location filename="../gui/SettingsView.qml" line="2314"/>
         <source>e.g., KMOD_CTRL+KMOD_ALT+SDL_SCANCODE_P</source>
         <translation>напр., KMOD_CTRL+KMOD_ALT+SDL_SCANCODE_P</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2328"/>
+        <location filename="../gui/SettingsView.qml" line="2337"/>
         <source>Outputs:</source>
         <translation>Виходи:</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2350"/>
+        <location filename="../gui/SettingsView.qml" line="2359"/>
         <source>Output %1:</source>
         <translation>Вихід %1:</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2359"/>
+        <location filename="../gui/SettingsView.qml" line="2368"/>
         <source>e.g., KMOD_CTRL+KMOD_ALT+SDL_SCANCODE_Q</source>
         <translation>напр., KMOD_CTRL+KMOD_ALT+SDL_SCANCODE_Q</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2381"/>
+        <location filename="../gui/SettingsView.qml" line="2391"/>
         <source>Remove</source>
         <translation>Видалити</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2389"/>
+        <location filename="../gui/SettingsView.qml" line="2398"/>
         <source>Add output</source>
         <translation>Додати вихід</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2400"/>
+        <location filename="../gui/SettingsView.qml" line="2408"/>
         <source>Remove combo</source>
         <translation>Видалити комбінацію</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2415"/>
+        <location filename="../gui/SettingsView.qml" line="2423"/>
         <source>Add combo</source>
         <translation>Додати комбінацію</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2419"/>
+        <location filename="../gui/SettingsView.qml" line="2427"/>
         <source>Reload</source>
         <translation>Перечитати</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2423"/>
+        <location filename="../gui/SettingsView.qml" line="2431"/>
         <source>Save</source>
         <translation>Зберегти</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2435"/>
+        <location filename="../gui/SettingsView.qml" line="2443"/>
         <source>keymap.xml path: %1</source>
         <translation>Шлях до keymap.xml: %1</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1118"/>
+        <location filename="../gui/SettingsView.qml" line="1123"/>
         <source>Enable HDR</source>
-        <translation>Увімкнути HDR</translation>
+        <translation>HDR</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1133"/>
+        <location filename="../gui/SettingsView.qml" line="1138"/>
         <source>The stream will be HDR-capable, but some games may require an HDR monitor on your host PC to enable HDR mode.</source>
         <translation>Трансляція підтримуватиме HDR, але деякі ігри можуть вимагати HDR-монітор на хост-ПК для увімкнення режиму HDR.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1135"/>
+        <location filename="../gui/SettingsView.qml" line="1140"/>
         <source>HDR streaming is not supported on this PC.</source>
         <translation>Трансляція HDR не підтримується на цьому ПК.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2033"/>
+        <location filename="../gui/SettingsView.qml" line="2039"/>
         <source>Enable YUV 4:4:4</source>
-        <translation>Увімкнути YUV 4:4:4</translation>
+        <translation>YUV 4:4:4</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2114"/>
+        <location filename="../gui/SettingsView.qml" line="2120"/>
         <source>Show performance stats while streaming</source>
-        <translation>Показувати статистику продуктивності під час трансляції</translation>
+        <translation>Статистика продуктивності під час трансляції</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2124"/>
+        <location filename="../gui/SettingsView.qml" line="2130"/>
         <source>Display real-time stream performance information while streaming.</source>
         <translation>Відображати інформацію про продуктивність трансляції в реальному часі.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2125"/>
+        <location filename="../gui/SettingsView.qml" line="2131"/>
         <source>You can toggle it at any time while streaming using Ctrl+Alt+Shift+S or Select+L1+R1+X.</source>
         <translation>Ви можете перемикати це в будь-який момент під час трансляції за допомогою Ctrl+Alt+Shift+S або Select+L1+R1+X.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2126"/>
+        <location filename="../gui/SettingsView.qml" line="2132"/>
         <source>The performance overlay is not supported on Steam Link or Raspberry Pi.</source>
         <translation>Оверлей продуктивності не підтримується на Steam Link або Raspberry Pi.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1681"/>
+        <location filename="../gui/SettingsView.qml" line="1686"/>
         <source>NOTE: Certain keyboard shortcuts like Ctrl+Alt+Del on Windows cannot be intercepted by any application, including Moonlight.</source>
         <translation>ПРИМІТКА: Деякі комбінації клавіш, як-от Ctrl+Alt+Del у Windows, не можуть бути перехоплені жодним застосунком, включаючи Moonlight.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1744"/>
+        <location filename="../gui/SettingsView.qml" line="1750"/>
         <source>Use touchscreen as a virtual trackpad</source>
         <translation>Використовувати сенсорний екран як віртуальний тачпад</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1761"/>
+        <location filename="../gui/SettingsView.qml" line="1767"/>
         <source>Swap left and right mouse buttons</source>
         <translation>Поміняти ліву та праву кнопки миші</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1773"/>
+        <location filename="../gui/SettingsView.qml" line="1779"/>
         <source>Reverse mouse scrolling direction</source>
         <translation>Інвертувати напрямок прокручування</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1787"/>
+        <location filename="../gui/SettingsView.qml" line="1793"/>
         <source>Gamepad Settings</source>
         <translation>Налаштування геймпада</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1797"/>
+        <location filename="../gui/SettingsView.qml" line="1803"/>
         <source>Swap A/B and X/Y gamepad buttons</source>
         <translation>Поміняти кнопки A/B та X/Y на геймпаді</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1807"/>
+        <location filename="../gui/SettingsView.qml" line="1813"/>
         <source>This switches gamepads into a Nintendo-style button layout</source>
         <translation>Перемикає геймпади в розкладку кнопок у стилі Nintendo</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1813"/>
+        <location filename="../gui/SettingsView.qml" line="1819"/>
         <source>Force gamepad #1 always connected</source>
         <translation>Примусово тримати геймпад №1 підключеним</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1823"/>
+        <location filename="../gui/SettingsView.qml" line="1829"/>
         <source>Forces a single gamepad to always stay connected to the host, even if no gamepads are actually connected to this PC.</source>
         <translation>Примусово утримує один геймпад підключеним до хоста, навіть якщо до цього ПК фактично не підключено жодного геймпада.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1610"/>
+        <location filename="../gui/SettingsView.qml" line="1615"/>
         <source>You can toggle this while streaming using Ctrl+Alt+Shift+M.</source>
         <translation>Ви можете перемикати це під час трансляції за допомогою Ctrl+Alt+Shift+M.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1831"/>
+        <location filename="../gui/SettingsView.qml" line="1837"/>
         <source>Enable mouse control with gamepads by holding the &apos;Start&apos; button</source>
-        <translation>Увімкнути керування мишею за допомогою геймпадів утримуванням кнопки «Start»</translation>
+        <translation>Керувати мишею хоста з геймпадів, утримуючи кнопку «Start»</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1842"/>
+        <location filename="../gui/SettingsView.qml" line="1848"/>
         <source>Process gamepad input when Moonlight is in the background</source>
         <translation>Обробляти введення з геймпада, коли Moonlight у фоні</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1853"/>
+        <location filename="../gui/SettingsView.qml" line="1859"/>
         <source>Allows Moonlight to capture gamepad inputs even if it&apos;s not the current window in focus</source>
         <translation>Дозволяє Moonlight приймати введення з геймпада, навіть коли його вікно не у фокусі</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1238"/>
+        <location filename="../gui/SettingsView.qml" line="1243"/>
         <source>Host Settings</source>
         <translation>Налаштування хоста</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1862"/>
+        <location filename="../gui/SettingsView.qml" line="1868"/>
         <source>Advanced Settings</source>
         <translation>Розширені налаштування</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1155"/>
+        <location filename="../gui/SettingsView.qml" line="1160"/>
         <source>Audio configuration</source>
         <translation>Конфігурація звуку</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1520"/>
+        <location filename="../gui/SettingsView.qml" line="1525"/>
         <source>Show connection quality warnings</source>
-        <translation>Показувати попередження про якість з&apos;єднання</translation>
+        <translation>Попередження про якість з&apos;єднання</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1543"/>
+        <location filename="../gui/SettingsView.qml" line="1548"/>
         <source>Discord Rich Presence integration</source>
         <translation>Інтеграція Discord Rich Presence</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1553"/>
+        <location filename="../gui/SettingsView.qml" line="1558"/>
         <source>Updates your Discord status to display the name of the game you&apos;re streaming.</source>
         <translation>Оновлює ваш статус у Discord, відображаючи назву гри, яку ви транслюєте.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1824"/>
+        <location filename="../gui/SettingsView.qml" line="1830"/>
         <source>Only enable this option when streaming a game that doesn&apos;t support gamepads being connected after startup.</source>
         <translation>Вмикайте цю опцію лише при трансляції гри, яка не підтримує підключення геймпадів після запуску.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1599"/>
+        <location filename="../gui/SettingsView.qml" line="1604"/>
         <source>Optimize mouse for remote desktop instead of games</source>
-        <translation>Оптимізувати мишу для віддаленого робочого столу замість ігор</translation>
+        <translation>Оптимізувати мишу для віддаленого робочого столу</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="775"/>
-        <location filename="../gui/SettingsView.qml" line="885"/>
+        <location filename="../gui/SettingsView.qml" line="780"/>
+        <location filename="../gui/SettingsView.qml" line="890"/>
         <source>Custom (%1 FPS)</source>
         <translation>Власна (%1 FPS)</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="790"/>
+        <location filename="../gui/SettingsView.qml" line="795"/>
         <source>Enter a custom frame rate:</source>
-        <translation>Введіть власну частоту кадрів:</translation>
+        <translation>Користувацька частота кадрів:</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="482"/>
-        <location filename="../gui/SettingsView.qml" line="491"/>
-        <location filename="../gui/SettingsView.qml" line="888"/>
+        <location filename="../gui/SettingsView.qml" line="487"/>
+        <location filename="../gui/SettingsView.qml" line="496"/>
+        <location filename="../gui/SettingsView.qml" line="893"/>
         <source>Custom</source>
         <translation>Власна</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="906"/>
+        <location filename="../gui/SettingsView.qml" line="911"/>
         <source>30 FPS</source>
         <translation>30 FPS</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="911"/>
+        <location filename="../gui/SettingsView.qml" line="916"/>
         <source>60 FPS</source>
         <translation>60 FPS</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1559"/>
+        <location filename="../gui/SettingsView.qml" line="1564"/>
         <source>Keep the display awake while streaming</source>
         <translation>Не вимикати дисплей під час трансляції</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1569"/>
+        <location filename="../gui/SettingsView.qml" line="1574"/>
         <source>Prevents the screensaver from starting or the display from going to sleep while streaming.</source>
         <translation>Запобігає запуску заставки або переходу дисплея в режим сну під час трансляції.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1672"/>
+        <location filename="../gui/SettingsView.qml" line="1677"/>
         <source>Capture system keyboard shortcuts</source>
         <translation>Перехоплювати системні комбінації клавіш</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1680"/>
+        <location filename="../gui/SettingsView.qml" line="1685"/>
         <source>This enables the capture of system-wide keyboard shortcuts like Alt+Tab that would normally be handled by the client OS while streaming.</source>
         <translation>Вмикає перехоплення системних комбінацій клавіш на кшталт Alt+Tab, які під час трансляції зазвичай обробляє ОС клієнта.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1710"/>
+        <location filename="../gui/SettingsView.qml" line="1716"/>
         <source>in fullscreen</source>
         <translation>у повноекранному режимі</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1714"/>
+        <location filename="../gui/SettingsView.qml" line="1720"/>
         <source>always</source>
         <translation>завжди</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1754"/>
+        <location filename="../gui/SettingsView.qml" line="1760"/>
         <source>When checked, the touchscreen acts like a trackpad. When unchecked, the touchscreen will directly control the mouse pointer.</source>
         <translation>Якщо увімкнено, сенсорний екран працює як тачпад. Якщо вимкнено, сенсорний екран безпосередньо керує покажчиком миші.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1248"/>
+        <location filename="../gui/SettingsView.qml" line="1253"/>
         <source>Optimize game settings for streaming</source>
         <translation>Оптимізувати налаштування гри для трансляції</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1259"/>
+        <location filename="../gui/SettingsView.qml" line="1264"/>
         <source>Quit app on host PC after ending stream</source>
         <translation>Закрити програму на хост-ПК після завершення трансляції</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1269"/>
+        <location filename="../gui/SettingsView.qml" line="1274"/>
         <source>This will close the app or game you are streaming when you end your stream. You will lose any unsaved progress!</source>
         <translation>Це закриє програму або гру, яку ви транслюєте, після завершення трансляції. Ви втратите весь незбережений прогрес!</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1872"/>
+        <location filename="../gui/SettingsView.qml" line="1878"/>
         <source>Video decoder</source>
         <translation>Відеодекодер</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1897"/>
-        <location filename="../gui/SettingsView.qml" line="1950"/>
-        <location filename="../gui/SettingsView.qml" line="2008"/>
+        <location filename="../gui/SettingsView.qml" line="1903"/>
+        <location filename="../gui/SettingsView.qml" line="1956"/>
+        <location filename="../gui/SettingsView.qml" line="2014"/>
         <source>Automatic (Recommended)</source>
         <translation>Автоматично (рекомендовано)</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1901"/>
+        <location filename="../gui/SettingsView.qml" line="1907"/>
         <source>Force software decoding</source>
-        <translation>Примусове програмне декодування</translation>
+        <translation>Програмне декодування</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1905"/>
+        <location filename="../gui/SettingsView.qml" line="1911"/>
         <source>Force hardware decoding</source>
-        <translation>Примусове апаратне декодування</translation>
+        <translation>Апаратне декодування</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1920"/>
+        <location filename="../gui/SettingsView.qml" line="1926"/>
         <source>Video codec</source>
         <translation>Відеокодек</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1954"/>
+        <location filename="../gui/SettingsView.qml" line="1960"/>
         <source>H.264</source>
         <translation>H.264</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1958"/>
+        <location filename="../gui/SettingsView.qml" line="1964"/>
         <source>HEVC (H.265)</source>
         <translation>HEVC (H.265)</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1977"/>
+        <location filename="../gui/SettingsView.qml" line="1983"/>
         <source>Renderer</source>
         <translation>Рендерер</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2055"/>
+        <location filename="../gui/SettingsView.qml" line="2061"/>
         <source>Good for streaming desktop and text-heavy games, but not recommended for fast-paced games.</source>
         <translation>Підходить для трансляції робочого столу та ігор з великою кількістю тексту, але не рекомендується для динамічних ігор.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2057"/>
+        <location filename="../gui/SettingsView.qml" line="2063"/>
         <source>YUV 4:4:4 is not supported on this PC.</source>
         <translation>YUV 4:4:4 не підтримується на цьому ПК.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2063"/>
+        <location filename="../gui/SettingsView.qml" line="2069"/>
         <source>Unlock bitrate limit (Experimental)</source>
         <translation>Зняти обмеження бітрейту (експериментально)</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2076"/>
+        <location filename="../gui/SettingsView.qml" line="2082"/>
         <source>This unlocks extremely high video bitrates for use with Sunshine hosts. It should only be used when streaming over an Ethernet LAN connection.</source>
         <translation>Відкриває дуже високі бітрейти відео для хостів Sunshine. Використовуйте лише при трансляції через дротову локальну мережу (Ethernet).</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2082"/>
+        <location filename="../gui/SettingsView.qml" line="2088"/>
         <source>Automatically find PCs on the local network (Recommended)</source>
         <translation>Автоматично знаходити ПК у локальній мережі (рекомендовано)</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2103"/>
+        <location filename="../gui/SettingsView.qml" line="2109"/>
         <source>Automatically detect blocked connections (Recommended)</source>
         <translation>Автоматично виявляти заблоковані з&apos;єднання (рекомендовано)</translation>
     </message>
@@ -1607,7 +1607,7 @@ Show/hide host pointer
     <message>
         <location filename="../gui/main.qml" line="366"/>
         <source>Update available for Moonlight: Version %1</source>
-        <translation>Доступне оновлення для Moonlight: версія %1</translation>
+        <translation>Доступна новіша версія Moonlight: %1</translation>
     </message>
     <message>
         <location filename="../gui/main.qml" line="413"/>
