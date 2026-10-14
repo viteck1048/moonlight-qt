@@ -1,8 +1,8 @@
 # Fork notes — Viktor's moonlight-qt fork
 
 Personal changes on top of **moonlight-stream/moonlight-qt**.
-Last synced with upstream around `upstream/master` @ **ca7d61f5** (merge commit `a4bd097e`,
-"Merge upstream/master (345 commits) into fork").
+Last synced with upstream @ **b0af84ea** (2026-10-14, 110 commits; previous sync: ca7d61f5 via
+`a4bd097e`). Branches: `master` = pure upstream mirror, **`custom-keymap` = the fork**.
 
 This file is the **rebase/merge survival guide**. The README's "Fork Features" section
 describes *what* the features do; this file lists *where they hook into upstream* and the
@@ -25,6 +25,18 @@ conflict; only the ~12 touched upstream files do, each at a small, known spot.
 - `553b41fb` Change display cycling to Ctrl+Alt+Shift+O (avoid Sunshine hotkey clash)
 - `a6bfe49c` Corrected native↔SDL mappings (Win/Linux, 102-key EU keyboard)
 - `63edcfdf` "qqqq" — junk/WIP commit, ignore / squash on next cleanup
+
+- 2026-10-14 sync notes: upstream moved `raiseAllKeys()` → keyboard.cpp and
+  `notifyMouseLeave()` → mouse.cpp; the only code conflict was those two sitting next to our
+  functions at the end of input.cpp (keep ours, drop theirs). Upstream also vendored
+  h264bitstream (no longer a submodule) and moonlight-common-c gained the `nanors` submodule.
+
+## Ukrainian translation (`app/languages/qml_uk.ts`)
+Upstream now has its own Ukrainian via Weblate, so this file conflicts on every sync. Don't
+resolve hunk by hunk: take upstream's file, run
+`/usr/lib64/qt6/bin/lupdate -no-obsolete app/app.pro -ts app/languages/qml_uk.ts` (adds our
+strings), fill/review the translations, then `lrelease` the same file (the .qm is committed).
+Terminology: pairing = «сполучення», host PC = «хост-ПК», GPU = «відеокарта», input = «введення».
 
 ---
 
@@ -72,8 +84,8 @@ git submodule update --init --recursive
 qmake6 moonlight-qt.pro
 make -j$(nproc)            # binary -> app/moonlight
 ```
-Then copy the folder to the Bazzite working copy to run (rsync excluding .git; the built
-`app/moonlight` is what matters). After editing `app.pro` you MUST re-run `qmake6`, not just make.
+Then copy just `app/moonlight` to `~/moonlight-qt/` on Bazzite (that folder holds only the
+binary + icon). After editing `app.pro` you MUST re-run `qmake6`, not just make.
 
 **Fedora ffmpeg gotcha:** rpmfusion ships ffmpeg headers under `/usr/include/ffmpeg/`. Do NOT
 hardcode that path — pkg-config already handles it (`libavcodec.pc` etc. set
