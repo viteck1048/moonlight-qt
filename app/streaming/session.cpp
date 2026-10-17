@@ -188,8 +188,8 @@ void Session::clConnectionStatusUpdate(int connectionStatus)
     {
     case CONN_STATUS_POOR:
         s_ActiveSession->m_OverlayManager.updateOverlayText(Overlay::OverlayStatusUpdate,
-                                                            s_ActiveSession->m_StreamConfig.bitrate > 5000 ?
-                                                                "Slow connection to PC\nReduce your bitrate" : "Poor connection to PC");
+                                                            (s_ActiveSession->m_StreamConfig.bitrate > 5000 ?
+                                                                tr("Slow connection to PC\nReduce your bitrate") : tr("Poor connection to PC")).toUtf8().constData());
         s_ActiveSession->m_OverlayManager.setOverlayState(Overlay::OverlayStatusUpdate, true);
         break;
     case CONN_STATUS_OKAY:
@@ -1550,7 +1550,7 @@ void Session::notifyMouseEmulationMode(bool enabled)
 
     // We re-use the status update overlay for mouse mode notification
     if (m_MouseEmulationRefCount > 0) {
-        m_OverlayManager.updateOverlayText(Overlay::OverlayStatusUpdate, "Gamepad mouse mode active\nLong press Start to deactivate");
+        m_OverlayManager.updateOverlayText(Overlay::OverlayStatusUpdate, tr("Gamepad mouse mode active\nLong press Start to deactivate").toUtf8().constData());
         m_OverlayManager.setOverlayState(Overlay::OverlayStatusUpdate, true);
     }
     else {
