@@ -41,6 +41,7 @@ public:
 
 private:
     void notifyOverlayUpdated(OverlayType type);
+    TTF_Font* getFontForText(OverlayType type, const char* text);
     SDL_Surface* RenderTextOutlinedWrapped(TTF_Font* font, const char* text, SDL_Color textColor, SDL_Color outlineColor, int outlineWidth, int wrapWidth);
 
     struct {
@@ -50,10 +51,12 @@ private:
         char text[1024];
 
         TTF_Font* font;
+        TTF_Font* fallbackFont;
         SDL_Surface* surface;
     } m_Overlays[OverlayMax];
     IOverlayRenderer* m_Renderer;
     QByteArray m_FontData;
+    QByteArray m_FallbackFontData;
 };
 
 }

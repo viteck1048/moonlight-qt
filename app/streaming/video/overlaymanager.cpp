@@ -5,7 +5,10 @@ using namespace Overlay;
 
 OverlayManager::OverlayManager() :
     m_Renderer(nullptr),
-    m_FontData(Path::readDataFile("ModeSeven.ttf"))
+    m_FontData(Path::readDataFile("ModeSeven.ttf")),
+    // ModeSeven only covers ASCII, so translated text that uses other
+    // scripts (Cyrillic, Greek, etc.) is rendered with Terminus instead.
+    m_FallbackFontData(Path::readDataFile("TerminusTTF-Bold.ttf"))
 {
     memset(m_Overlays, 0, sizeof(m_Overlays));
 
@@ -36,6 +39,9 @@ OverlayManager::~OverlayManager()
         }
         if (m_Overlays[i].font != nullptr) {
             TTF_CloseFont(m_Overlays[i].font);
+        }
+        if (m_Overlays[i].fallbackFont != nullptr) {
+            TTF_CloseFont(m_Overlays[i].fallbackFont);
         }
     }
 
@@ -149,7 +155,7 @@ void OverlayManager::notifyOverlayUpdated(OverlayType type)
         (void**)&m_Overlays[type].surface,
         m_Overlays[type].enabled ?
             // The _Wrapped variant is required for line breaks to work
-            RenderTextOutlinedWrapped(m_Overlays[type].font,
+            RenderTextOutlinedWrapped(getFontForText(type, m_Overlays[type].text),
                                       m_Overlays[type].text,
                                       m_Overlays[type].color,
                                       {0, 0, 0, 255},
@@ -164,6 +170,39 @@ void OverlayManager::notifyOverlayUpdated(OverlayType type)
     if (oldSurface != nullptr) {
         SDL_FreeSurface(oldSurface);
     }
+}
+
+TTF_Font* OverlayManager::getFontForText(OverlayType type, const char* text)
+{
+    bool needsFallback = false;
+    for (const QChar& ch : QString::fromUtf8(text)) {
+        if (ch == '\n') {
+            continue;
+        }
+        if (ch.isSurrogate() || !TTF_GlyphIsProvided(m_Overlays[type].font, ch.unicode())) {
+            needsFallback = true;
+            break;
+        }
+    }
+
+    if (!needsFallback || m_FallbackFontData.isEmpty()) {
+        return m_Overlays[type].font;
+    }
+
+    if (m_Overlays[type].fallbackFont == nullptr) {
+        // m_FallbackFontData must stay around until the font is closed
+        m_Overlays[type].fallbackFont = TTF_OpenFontRW(SDL_RWFromConstMem(m_FallbackFontData.constData(), m_FallbackFontData.size()),
+                                                       1,
+                                                       m_Overlays[type].fontSize);
+        if (m_Overlays[type].fallbackFont == nullptr) {
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                        "TTF_OpenFont() failed for fallback font: %s",
+                        TTF_GetError());
+            return m_Overlays[type].font;
+        }
+    }
+
+    return m_Overlays[type].fallbackFont;
 }
 
 SDL_Surface* OverlayManager::RenderTextOutlinedWrapped(TTF_Font* font, const char* text, SDL_Color textColor, SDL_Color outlineColor, int outlineWidth, int wrapWidth) {
