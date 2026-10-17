@@ -578,6 +578,18 @@
         <translation>Код помилки: %1</translation>
     </message>
     <message>
+        <location filename="../streaming/session.cpp" line="194"/>
+        <source>Slow connection to PC
+Reduce your bitrate</source>
+        <translation>Повільне з&apos;єднання з ПК
+Знизьте бітрейт</translation>
+    </message>
+    <message>
+        <location filename="../streaming/session.cpp" line="194"/>
+        <source>Poor connection to PC</source>
+        <translation>Погане з&apos;єднання з ПК</translation>
+    </message>
+    <message>
         <location filename="../streaming/session.cpp" line="1060"/>
         <source>Using software decoding due to your selection to force H.264 without GPU support. This may cause poor streaming performance.</source>
         <translation>Використовується програмне декодування через примусовий вибір H.264, який відеокарта не підтримує. Це може погіршити якість трансляції.</translation>
@@ -657,6 +669,13 @@
         <location filename="../streaming/session.cpp" line="1246"/>
         <source>Your codec selection and force hardware decoding setting are not compatible. This PC&apos;s GPU lacks support for decoding your chosen codec.</source>
         <translation>Вибраний кодек несумісний із примусовим апаратним декодуванням: відеокарта цього ПК не вміє декодувати цей кодек.</translation>
+    </message>
+    <message>
+        <location filename="../streaming/session.cpp" line="1556"/>
+        <source>Gamepad mouse mode active
+Long press Start to deactivate</source>
+        <translation>Режим миші з геймпада увімкнено
+Утримуйте Start, щоб вимкнути</translation>
     </message>
     <message>
         <location filename="../streaming/session.cpp" line="2249"/>
