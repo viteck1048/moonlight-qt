@@ -114,3 +114,8 @@ Fork-only files, no upstream counterparts (no merge conflicts expected):
 
 The workflow copies the Windows steps from upstream `build-win-mac.yml`; if upstream changes the Qt
 version or the Windows build steps there, mirror the change here.
+
+**Windows keymap location:** `keymap.xml` lives in `%APPDATA%\Moonlight Game Streaming Project\Moonlight\`
+(Roaming), not `AppConfigLocation` (`%LOCALAPPDATA%`), because upstream's MSI (`wix/Moonlight/Product.wxs`,
+`RemoveFolderEx CleanupAppDataFolder`) wipes the whole `%LOCALAPPDATA%\Moonlight Game Streaming Project`
+on uninstall, which includes every major upgrade. A leftover legacy keymap is copied over on first run.

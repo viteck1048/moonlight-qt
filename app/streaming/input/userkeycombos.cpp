@@ -261,9 +261,45 @@ UserKeyKSh UserKeyComboManager::convertToConfig(const SDL_KeyboardEvent* event) 
     return config;
 }
 
+#ifdef Q_OS_WIN
+void UserKeyComboManager::migrateLegacyKeymap(const QString& keymapDirectory)
+{
+    const QString legacyDirectory = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    if (keymapDirectory.isEmpty() || legacyDirectory.isEmpty() ||
+            QDir(keymapDirectory) == QDir(legacyDirectory)) {
+        return;
+    }
+
+    const QString newPath = QDir(keymapDirectory).filePath(QStringLiteral("keymap.xml"));
+    const QString legacyPath = QDir(legacyDirectory).filePath(QStringLiteral("keymap.xml"));
+    if (QFile::exists(newPath) || !QFile::exists(legacyPath)) {
+        return;
+    }
+
+    if (QDir().mkpath(keymapDirectory) && QFile::copy(legacyPath, newPath)) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Migrated keymap from %s to %s",
+                    legacyPath.toUtf8().constData(),
+                    newPath.toUtf8().constData());
+    }
+    else {
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Failed to migrate keymap from %s",
+                    legacyPath.toUtf8().constData());
+    }
+}
+#endif
+
 bool UserKeyComboManager::ensureKeymapPath()
 {
+#ifdef Q_OS_WIN
+    // On Windows AppConfigLocation is under %LOCALAPPDATA%, which the MSI wipes on
+    // uninstall and therefore also on upgrade. Keep the keymap in Roaming instead.
+    QString keymapDirectory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    migrateLegacyKeymap(keymapDirectory);
+#else
     QString keymapDirectory = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+#endif
     if (keymapDirectory.isEmpty()) {
         keymapDirectory = QCoreApplication::applicationDirPath();
     }

@@ -59,6 +59,9 @@ private:
     UserKeyComboManager();
 
     bool ensureKeymapPath();
+#ifdef Q_OS_WIN
+    void migrateLegacyKeymap(const QString& keymapDirectory);
+#endif
     bool loadUserKeyCombos();
     bool parseUserKeyComboElement(QXmlStreamReader& keymapXml, UserKeyComboInterm& combo) const;
     UserKeyKShHx buildRuntimeBinding(const UserKeyKSh& config, bool outBinding) const;
