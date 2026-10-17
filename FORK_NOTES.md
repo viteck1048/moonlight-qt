@@ -102,3 +102,15 @@ adds the `-I` globally). If you see missing `libavcodec/...` headers, fix pkg-co
 5. Re-stitch the `SettingsView.qml` blocks (search `UserKeyComboBridge`).
 6. `qmake6 && make -j$(nproc)`; verify: Settings shows the remap UI, Ctrl+Alt+Shift+O cycles
    host displays, Ctrl+Alt+Shift+U toggles custom combos.
+
+## Release packages (fork-only)
+
+Fork-only files, no upstream counterparts (no merge conflicts expected):
+- `.github/workflows/release-fork.yml` — push a tag `v<upstream>-keymap.<n>` (e.g. `v6.2.0-keymap.1`)
+  to build Windows (setup .exe + portable zips, x64/arm64), AppImage, `.rpm` (Fedora 44) and `.deb`
+  (Ubuntu 24.04), and attach them to a **draft** GitHub release. Pushing branch `release-ci` runs the
+  builds without creating a release.
+- `packaging/rpm/moonlight-qt-keymap.spec`, `packaging/deb/build-deb.sh`.
+
+The workflow copies the Windows steps from upstream `build-win-mac.yml`; if upstream changes the Qt
+version or the Windows build steps there, mirror the change here.

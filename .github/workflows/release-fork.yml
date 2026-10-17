@@ -1,0 +1,197 @@
+---
+# Fork-only: builds release packages and attaches them to a draft GitHub release.
+# Trigger by pushing a tag like v6.2.0-keymap.1
+name: Release (fork)
+permissions:
+  contents: read
+
+on:
+  push:
+    tags:
+      - 'v*-keymap.*'
+    branches:
+      - release-ci
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      upstream_version: ${{ steps.ver.outputs.upstream_version }}
+      release: ${{ steps.ver.outputs.release }}
+    steps:
+      - id: ver
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="0.0.0-keymap.test"
+          fi
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "upstream_version=${VERSION%%-*}" >> "${GITHUB_OUTPUT}"
+          echo "release=${VERSION#*-}" >> "${GITHUB_OUTPUT}"
+
+  build-appimage:
+    needs: setup
+    uses: ./.github/workflows/build-appimage.yml
+    with:
+      ci_version: ${{ needs.setup.outputs.version }}
+
+  build-windows:
+    needs: setup
+    runs-on: windows-2025
+    env:
+      QT_VERSION: 6.12.0
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          fetch-depth: 1
+
+      - name: Download dependencies
+        run: powershell ./setup-deps.ps1
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          cache: true
+          set-env: false
+          add-tools-to-path: false
+          tools: 'tools_qtcreator_gui'
+          version: ${{ env.QT_VERSION }}
+          aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@073e34d7c2ab4ae6961ed7cca690b3abd5ba5a7e'
+
+      - name: Install Qt ARM64
+        uses: jurplel/install-qt-action@v4
+        with:
+          cache: true
+          set-env: false
+          add-tools-to-path: false
+          arch: win64_msvc2022_arm64_cross_compiled
+          version: ${{ env.QT_VERSION }}
+
+      # CI_VERSION is deliberately left unset: that makes the scripts build
+      # a real release (version from version.txt, portable.dat in the zip).
+      - name: Build x64 binaries
+        shell: cmd
+        run: |
+          set "PATH=%QT_PATH%;%PATH%"
+          scripts\build-arch.bat Release x64
+        env:
+          QT_PATH: ${{ runner.workspace }}\Qt\${{ env.QT_VERSION }}\msvc2022_64\bin
+
+      - name: Build ARM64 binaries
+        shell: cmd
+        run: |
+          set "PATH=%QT_PATH%;%PATH%"
+          scripts\build-arch.bat Release arm64
+        env:
+          QT_PATH: ${{ runner.workspace }}\Qt\${{ env.QT_VERSION }}\msvc2022_arm64\bin
+
+      - name: Build installer bundle
+        shell: cmd
+        run: scripts\generate-bundle.bat Release
+
+      - name: Collect packages
+        shell: pwsh
+        run: |
+          $up = (Get-Content app/version.txt -Raw).Trim()
+          $v = "${{ needs.setup.outputs.version }}"
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item "build/installer-release/MoonlightSetup-$up.exe" "dist/MoonlightSetup-$v.exe"
+          Copy-Item "build/installer-x64-release/MoonlightPortable-x64-$up.zip" "dist/MoonlightPortable-x64-$v.zip"
+          Copy-Item "build/installer-arm64-release/MoonlightPortable-arm64-$up.zip" "dist/MoonlightPortable-arm64-$v.zip"
+          Get-ChildItem dist
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: release-windows
+          path: dist/*
+          compression-level: 0
+          if-no-files-found: error
+
+  build-rpm:
+    needs: setup
+    runs-on: ubuntu-latest
+    container: fedora:44
+    steps:
+      - name: Install build tools
+        run: dnf install -y git rpm-build dnf-plugins-core
+
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          fetch-depth: 1
+
+      - name: Install build dependencies
+        run: dnf builddep -y packaging/rpm/moonlight-qt-keymap.spec --define "ver 0" --define "rel 0"
+
+      - name: Build RPM
+        run: |
+          git config --global --add safe.directory "$PWD"
+          rpmbuild -bb --build-in-place \
+            --define "_topdir $PWD/rpmbuild" \
+            --define "ver ${{ needs.setup.outputs.upstream_version }}" \
+            --define "rel ${{ needs.setup.outputs.release }}" \
+            packaging/rpm/moonlight-qt-keymap.spec
+          mkdir -p dist
+          cp rpmbuild/RPMS/*/*.rpm dist/
+          ls -la dist
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: release-rpm
+          path: dist/*
+          if-no-files-found: error
+
+  build-deb:
+    needs: setup
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          fetch-depth: 1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential dpkg-dev qmake6 qt6-base-dev qt6-base-private-dev qt6-declarative-dev libqt6svg6-dev \
+            libssl-dev libsdl2-dev libsdl2-ttf-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libopus-dev \
+            libva-dev libvdpau-dev libdrm-dev libwayland-dev libx11-dev libplacebo-dev libvulkan-dev
+
+      - name: Build DEB
+        run: packaging/deb/build-deb.sh "${{ needs.setup.outputs.version }}" dist
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: release-deb
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: [setup, build-appimage, build-windows, build-rpm, build-deb]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dist
+          gh release create "${GITHUB_REF_NAME}" dist/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --draft \
+            --title "Moonlight ${GITHUB_REF_NAME} (custom keymap fork)" \
+            --generate-notes
