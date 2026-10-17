@@ -1639,7 +1639,7 @@ Flickable {
                         id: userCombosEnabledCheck
                         hoverEnabled: true
                         width: parent.width
-                        text: qsTr("Enable custom keyboard combos from keymap.xml")
+                        text: qsTr("Enable custom keyboard combos")
                         font.pointSize: 12
                         checked: StreamingPreferences.userCombosEnabled
                         onCheckedChanged: StreamingPreferences.userCombosEnabled = checked
@@ -1647,7 +1647,7 @@ Flickable {
                         ToolTip.delay: 1000
                         ToolTip.timeout: 10000
                         ToolTip.visible: hovered
-                        ToolTip.text: qsTr("Allows Moonlight to intercept configured key combinations and substitute custom outputs defined in keymap.xml.") + "\n\n" +
+                        ToolTip.text: qsTr("Allows Moonlight to intercept configured key combinations and substitute custom outputs.") + "\n\n" +
                                     qsTr("You can toggle this while streaming using Ctrl+Alt+Shift+U.")
                     }
 
@@ -2436,14 +2436,6 @@ Flickable {
                     font.pointSize: 11
                     color: keymapEditorStatusFailed ? "#e57373" : "#a5d6a7"
                 }
-            }
-
-            Label {
-                width: parent.width
-                text: qsTr("keymap.xml path: %1").arg(keymapBridge.keymapPath())
-                font.pointSize: 10
-                color: "#aaaaaa"
-                wrapMode: Text.Wrap
             }
         }
     }

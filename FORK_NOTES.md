@@ -67,7 +67,7 @@ sees raw `SDL_KeyboardEvent`s.
 | `app/streaming/session.{h,cpp}` | `Session` ctor gains `ComputerManager* computerManager = nullptr`; member `m_ComputerManager`; `updateClientDisplayCount(int)`; passes `userCombos` + `clientDisplayCount` into `SdlInputHandler` | ctor signature change → see callers below |
 | `app/backend/nvcomputer.{h,cpp}` | `int clientDisplayCount = 1;` field + its (de)serialization and `isEqualSerialized()` | upstream adds fields in the same spots; remember the serialize + isEqualSerialized triplet |
 | `app/cli/startstream.cpp`, `app/gui/appmodel.cpp`, `app/gui/computermodel.cpp` | updated `new Session(...)` calls to pass `m_ComputerManager` (and `nullptr` prefs where needed) | only conflict if upstream changes the Session ctor too |
-| `app/gui/SettingsView.qml` (+632) | the whole remapping UI (key-capture/auto-detect, keymap.xml edit/save) + toggles for the new prefs | biggest QML diff; upstream restructures SettingsView often → expect to re-stitch our `Item/GroupBox` blocks. Ours are self-contained sections, search for `UserKeyComboBridge` / `pointerRegionLockActive` |
+| `app/gui/SettingsView.qml` (+632) | the whole remapping UI (key-capture/auto-detect, combo edit/save) + toggles for the new prefs | biggest QML diff; upstream restructures SettingsView often → expect to re-stitch our `Item/GroupBox` blocks. Ours are self-contained sections, search for `UserKeyComboBridge` / `pointerRegionLockActive` |
 
 ### Hotkeys added (live in input.cpp `performSpecialKeyCombo` + the enum)
 - `Ctrl+Alt+Shift+U` — toggle custom user combos.
@@ -115,7 +115,9 @@ Fork-only files, no upstream counterparts (no merge conflicts expected):
 The workflow copies the Windows steps from upstream `build-win-mac.yml`; if upstream changes the Qt
 version or the Windows build steps there, mirror the change here.
 
-**Windows keymap location:** `keymap.xml` lives in `%APPDATA%\Moonlight Game Streaming Project\Moonlight\`
-(Roaming), not `AppConfigLocation` (`%LOCALAPPDATA%`), because upstream's MSI (`wix/Moonlight/Product.wxs`,
-`RemoveFolderEx CleanupAppDataFolder`) wipes the whole `%LOCALAPPDATA%\Moonlight Game Streaming Project`
-on uninstall, which includes every major upgrade. A leftover legacy keymap is copied over on first run.
+**Key combo storage:** user key combos live in `QSettings` (array `userKeyCombos`: `inMod`, `inCode`,
+`description`, nested array `outputs` with `mod`/`code`), next to the rest of Moonlight's settings
+(registry on Windows, ini next to the exe in portable mode, `~/.config/Moonlight Game Streaming Project/Moonlight.conf`
+on Linux). Older builds used `keymap.xml` in `AppConfigLocation`; on first start without `userKeyCombos/size`
+it is imported once (the file is left alone). Don't go back to a file under `%LOCALAPPDATA%`: upstream's MSI
+(`RemoveFolderEx CleanupAppDataFolder` in `wix/Moonlight/Product.wxs`) wipes that folder on every upgrade.

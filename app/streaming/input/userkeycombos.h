@@ -48,7 +48,6 @@ public:
     const QVector<UserKeyComboHx>& runtimeCombos() const;
     const QVector<UserKeyComboInterm>& configCombos() const { return m_UserKeyCombosInterm; }
     void setConfigCombos(QVector<UserKeyComboInterm> combos);
-    const QString& keymapPath() const { return m_KeymapPath; }
 
     bool saveUserKeyCombos() const;
 
@@ -58,15 +57,12 @@ public:
 private:
     UserKeyComboManager();
 
-    bool ensureKeymapPath();
-#ifdef Q_OS_WIN
-    void migrateLegacyKeymap(const QString& keymapDirectory);
-#endif
     bool loadUserKeyCombos();
+    bool importLegacyKeymapXml();
+    bool loadKeymapXml(const QString& path);
     bool parseUserKeyComboElement(QXmlStreamReader& keymapXml, UserKeyComboInterm& combo) const;
     UserKeyKShHx buildRuntimeBinding(const UserKeyKSh& config, bool outBinding) const;
 
-    QString m_KeymapPath;
     QVector<UserKeyComboInterm> m_UserKeyCombosInterm;
     mutable QVector<UserKeyComboHx> m_UserKeyCombosRuntime;
 };

@@ -237,8 +237,3 @@ QString UserKeyComboBridge::keyEventToTokens(int nativeScancode, int nativeModif
     
     return tokens.join("+");
 }
-
-QString UserKeyComboBridge::keymapPath() const
-{
-    return UserKeyComboManager::instance().keymapPath();
-}

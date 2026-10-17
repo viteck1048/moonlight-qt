@@ -3,13 +3,19 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
-#include <QFileInfo>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QStringList>
-#include <QTextStream>
 #include <QXmlStreamReader>
-#include <QXmlStreamWriter>
 #include <utility>
+
+#define SER_USERKEYCOMBOS "userKeyCombos"
+#define SER_INMOD "inMod"
+#define SER_INCODE "inCode"
+#define SER_DESCRIPTION "description"
+#define SER_OUTPUTS "outputs"
+#define SER_MOD "mod"
+#define SER_CODE "code"
 
 UserKeyComboManager& UserKeyComboManager::instance()
 {
@@ -23,9 +29,6 @@ UserKeyComboManager::UserKeyComboManager()
 
 bool UserKeyComboManager::initialize()
 {
-    if (!ensureKeymapPath()) {
-        return false;
-    }
     return loadUserKeyCombos();
 }
 
@@ -34,23 +37,94 @@ bool UserKeyComboManager::reload()
     return loadUserKeyCombos();
 }
 
+static QStringList splitModifierTokens(const QString& text)
+{
+    return text.split(QLatin1String("|"), Qt::SkipEmptyParts);
+}
+
 bool UserKeyComboManager::loadUserKeyCombos()
 {
-    if (!ensureKeymapPath()) {
-        return false;
+    QSettings settings;
+
+    // First run with this storage: pick up the old keymap.xml if there is one
+    if (!settings.contains(SER_USERKEYCOMBOS "/size")) {
+        importLegacyKeymapXml();
+        return true;
     }
-    
-    QFile keymapFile(m_KeymapPath);
+
+    m_UserKeyCombosInterm.clear();
+
+    int comboCount = settings.beginReadArray(SER_USERKEYCOMBOS);
+    for (int i = 0; i < comboCount; i++) {
+        settings.setArrayIndex(i);
+
+        UserKeyComboInterm combo;
+        combo.input.modifierTokens = splitModifierTokens(settings.value(SER_INMOD).toString());
+        combo.input.scancodeToken = settings.value(SER_INCODE).toString();
+        combo.description = settings.value(SER_DESCRIPTION).toString();
+
+        int outputCount = settings.beginReadArray(SER_OUTPUTS);
+        for (int j = 0; j < outputCount; j++) {
+            settings.setArrayIndex(j);
+
+            UserKeyKSh output;
+            output.modifierTokens = splitModifierTokens(settings.value(SER_MOD).toString());
+            output.scancodeToken = settings.value(SER_CODE).toString();
+            combo.outputs.append(output);
+        }
+        settings.endArray();
+
+        m_UserKeyCombosInterm.append(combo);
+    }
+    settings.endArray();
+
+    return true;
+}
+
+bool UserKeyComboManager::importLegacyKeymapXml()
+{
+    // Older builds kept the combos in keymap.xml. Check every place it could be.
+    QStringList candidates;
+    candidates << QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+               << QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+               << QCoreApplication::applicationDirPath();
+
+    for (const QString& directory : candidates) {
+        if (directory.isEmpty()) {
+            continue;
+        }
+
+        const QString legacyPath = QDir(directory).filePath(QStringLiteral("keymap.xml"));
+        if (!QFile::exists(legacyPath)) {
+            continue;
+        }
+
+        if (!loadKeymapXml(legacyPath)) {
+            continue;
+        }
+
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Imported %d key combos from %s",
+                    (int)m_UserKeyCombosInterm.size(),
+                    legacyPath.toUtf8().constData());
+        return saveUserKeyCombos();
+    }
+
+    return false;
+}
+
+bool UserKeyComboManager::loadKeymapXml(const QString& path)
+{
+    QFile keymapFile(path);
     if (!keymapFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                     "Keymap config not loaded (path: %s): %s",
-                    m_KeymapPath.toUtf8().constData(),
+                    path.toUtf8().constData(),
                     keymapFile.errorString().toUtf8().constData());
         return false;
     }
     
-    // Clear the old intermediate array
-    m_UserKeyCombosInterm.clear();
+    QVector<UserKeyComboInterm> combos;
     
     QXmlStreamReader keymapXml(&keymapFile);
     while (!keymapXml.atEnd() && !keymapXml.hasError()) {
@@ -63,7 +137,7 @@ bool UserKeyComboManager::loadUserKeyCombos()
         if (keymapXml.name() == QLatin1String("userKeyCombo")) {
             UserKeyComboInterm combo;
             if (parseUserKeyComboElement(keymapXml, combo)) {
-                m_UserKeyCombosInterm.append(combo);
+                combos.append(combo);
             }
         }
     }
@@ -76,6 +150,7 @@ bool UserKeyComboManager::loadUserKeyCombos()
         return false;
     }
     
+    m_UserKeyCombosInterm = std::move(combos);
     return true;
 }
 
@@ -109,56 +184,37 @@ void UserKeyComboManager::setConfigCombos(QVector<UserKeyComboInterm> combos)
 
 bool UserKeyComboManager::saveUserKeyCombos() const
 {
-    if (m_KeymapPath.isEmpty()) {
+    QSettings settings;
+
+    // Drop stale entries in case the new list is shorter
+    settings.remove(SER_USERKEYCOMBOS);
+
+    settings.beginWriteArray(SER_USERKEYCOMBOS, m_UserKeyCombosInterm.size());
+    for (int i = 0; i < m_UserKeyCombosInterm.size(); i++) {
+        const UserKeyComboInterm& combo = m_UserKeyCombosInterm[i];
+        settings.setArrayIndex(i);
+
+        settings.setValue(SER_INMOD, combo.input.modifierTokens.join(QLatin1String("|")));
+        settings.setValue(SER_INCODE, combo.input.scancodeToken);
+        settings.setValue(SER_DESCRIPTION, combo.description);
+
+        settings.beginWriteArray(SER_OUTPUTS, combo.outputs.size());
+        for (int j = 0; j < combo.outputs.size(); j++) {
+            settings.setArrayIndex(j);
+            settings.setValue(SER_MOD, combo.outputs[j].modifierTokens.join(QLatin1String("|")));
+            settings.setValue(SER_CODE, combo.outputs[j].scancodeToken);
+        }
+        settings.endArray();
+    }
+    settings.endArray();
+
+    settings.sync();
+    if (settings.status() != QSettings::NoError) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Cannot save key combos: keymap path not initialized");
+                    "Failed to save key combos to settings");
         return false;
     }
-    
-    QFile file(m_KeymapPath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Failed to open keymap file for writing (%s): %s",
-                    m_KeymapPath.toUtf8().constData(),
-                    file.errorString().toUtf8().constData());
-        return false;
-    }
-    
-    QXmlStreamWriter writer(&file);
-    writer.setAutoFormatting(true);
-    writer.writeStartDocument();
-    writer.writeStartElement(QStringLiteral("userKeyCombos"));
-    
-    for (const UserKeyComboInterm& combo : m_UserKeyCombosInterm) {
-        writer.writeStartElement(QStringLiteral("userKeyCombo"));
-        
-        // Input
-        writer.writeStartElement(QStringLiteral("in"));
-        writer.writeTextElement(QStringLiteral("mod"), combo.input.modifierTokens.join(QLatin1String("|")));
-        writer.writeTextElement(QStringLiteral("code"), combo.input.scancodeToken);
-        writer.writeEndElement();
-        
-        // Description
-        if (!combo.description.isEmpty()) {
-            writer.writeTextElement(QStringLiteral("description"), combo.description);
-        }
-        
-        // Outputs
-        writer.writeStartElement(QStringLiteral("outArr"));
-        for (const UserKeyKSh& output : combo.outputs) {
-            writer.writeStartElement(QStringLiteral("out"));
-            writer.writeTextElement(QStringLiteral("mod"), output.modifierTokens.join(QLatin1String("|")));
-            writer.writeTextElement(QStringLiteral("code"), output.scancodeToken);
-            writer.writeEndElement();
-        }
-        writer.writeEndElement();
-        
-        writer.writeEndElement();
-    }
-    
-    writer.writeEndElement();
-    writer.writeEndDocument();
-    
+
     return true;
 }
 
@@ -259,122 +315,6 @@ UserKeyKSh UserKeyComboManager::convertToConfig(const SDL_KeyboardEvent* event) 
     if (modifiers & KMOD_RGUI) config.modifierTokens.append("KMOD_RGUI");
     
     return config;
-}
-
-#ifdef Q_OS_WIN
-void UserKeyComboManager::migrateLegacyKeymap(const QString& keymapDirectory)
-{
-    const QString legacyDirectory = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
-    if (keymapDirectory.isEmpty() || legacyDirectory.isEmpty() ||
-            QDir(keymapDirectory) == QDir(legacyDirectory)) {
-        return;
-    }
-
-    const QString newPath = QDir(keymapDirectory).filePath(QStringLiteral("keymap.xml"));
-    const QString legacyPath = QDir(legacyDirectory).filePath(QStringLiteral("keymap.xml"));
-    if (QFile::exists(newPath) || !QFile::exists(legacyPath)) {
-        return;
-    }
-
-    if (QDir().mkpath(keymapDirectory) && QFile::copy(legacyPath, newPath)) {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "Migrated keymap from %s to %s",
-                    legacyPath.toUtf8().constData(),
-                    newPath.toUtf8().constData());
-    }
-    else {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Failed to migrate keymap from %s",
-                    legacyPath.toUtf8().constData());
-    }
-}
-#endif
-
-bool UserKeyComboManager::ensureKeymapPath()
-{
-#ifdef Q_OS_WIN
-    // On Windows AppConfigLocation is under %LOCALAPPDATA%, which the MSI wipes on
-    // uninstall and therefore also on upgrade. Keep the keymap in Roaming instead.
-    QString keymapDirectory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    migrateLegacyKeymap(keymapDirectory);
-#else
-    QString keymapDirectory = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
-#endif
-    if (keymapDirectory.isEmpty()) {
-        keymapDirectory = QCoreApplication::applicationDirPath();
-    }
-    
-    QDir keymapDir(keymapDirectory);
-    if (!keymapDir.exists() && !keymapDir.mkpath(".")) {
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                    "Failed to create keymap directory (%s). Falling back to application dir.",
-                    keymapDirectory.toUtf8().constData());
-        keymapDir = QDir(QCoreApplication::applicationDirPath());
-    }
-    
-    const QString keymapPath = keymapDir.filePath(QStringLiteral("keymap.xml"));
-    
-    if (!QFile::exists(keymapPath)) {
-        QFileInfo keymapInfo(keymapPath);
-        if (!keymapInfo.dir().exists() && !QDir().mkpath(keymapInfo.dir().absolutePath())) {
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                        "Failed to create keymap directory for template (%s)",
-                        keymapPath.toUtf8().constData());
-            return false;
-        }
-        
-        QFile templateFile(keymapPath);
-        if (!templateFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
-                        "Failed to create keymap template: %s",
-                        templateFile.errorString().toUtf8().constData());
-            return false;
-        }
-        
-        QTextStream out(&templateFile);
-        out << "<!-- Moonlight user key combos -->\n";
-        out << "<userKeyCombos>\n";
-        out << "    <!--\n";
-        out << "    <userKeyCombo>\n";
-        out << "        <in>\n";
-        out << "            <mod>KMOD_LCTRL|KMOD_LALT</mod>\n";
-        out << "            <code>SDL_SCANCODE_F1</code>\n";
-        out << "        </in>\n";
-        out << "        <description>Optional description</description>\n";
-        out << "        <outArr>\n";
-        out << "            <out>\n";
-        out << "                <mod>KMOD_LCTRL|KMOD_LSHIFT</mod>\n";
-        out << "                <code>SDL_SCANCODE_DELETE</code>\n";
-        out << "            </out>\n";
-        out << "        </outArr>\n";
-        out << "    </userKeyCombo>\n";
-        out << "    -->\n";
-        out << "    <!--\n";
-        out << "    <userKeyCombo>\n";
-        out << "        <in>\n";
-        out << "            <mod>KMOD_LCTRL|KMOD_LALT</mod>\n";
-        out << "            <code>SDL_SCANCODE_F2</code>\n";
-        out << "        </in>\n";
-        out << "        <description></description>\n";
-        out << "        <outArr>\n";
-        out << "            <out>\n";
-        out << "                <mod>KMOD_LCTRL|KMOD_LSHIFT</mod>\n";
-        out << "                <code>SDL_SCANCODE_DELETE</code>\n";
-        out << "            </out>\n";
-        out << "            <out>\n";
-        out << "                <mod>KMOD_LCTRL|KMOD_LSHIFT</mod>\n";
-        out << "                <code>SDL_SCANCODE_L</code>\n";
-        out << "            </out>\n";
-        out << "        </outArr>\n";
-        out << "    </userKeyCombo>\n";
-        out << "    -->\n";
-        out << "</userKeyCombos>\n";
-        
-        templateFile.close();
-    }
-    
-    m_KeymapPath = keymapPath;
-    return true;
 }
 
 bool UserKeyComboManager::parseUserKeyComboElement(QXmlStreamReader& keymapXml, UserKeyComboInterm& combo) const

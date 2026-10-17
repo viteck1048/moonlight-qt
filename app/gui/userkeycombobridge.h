@@ -19,7 +19,6 @@ public:
     Q_INVOKABLE QVariantMap emptyKeySpec() const;
     Q_INVOKABLE QVariantMap emptyCombo() const;
     Q_INVOKABLE QString keyEventToTokens(int nativeScancode, int nativeModifiers);
-    Q_INVOKABLE QString keymapPath() const;
 
 signals:
     void keyCaptured(const QVariantList& keyData);

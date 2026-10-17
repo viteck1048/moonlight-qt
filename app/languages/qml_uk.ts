@@ -953,16 +953,6 @@ Long press Start to deactivate</source>
         <translation>Можна перемкнути під час трансляції, натиснувши Ctrl+Alt+Shift+L.</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="1642"/>
-        <source>Enable custom keyboard combos from keymap.xml</source>
-        <translation>Власні комбінації клавіш з keymap.xml</translation>
-    </message>
-    <message>
-        <location filename="../gui/SettingsView.qml" line="1650"/>
-        <source>Allows Moonlight to intercept configured key combinations and substitute custom outputs defined in keymap.xml.</source>
-        <translation>Дозволяє Moonlight перехоплювати налаштовані комбінації клавіш і підставляти замість них власні, задані в keymap.xml.</translation>
-    </message>
-    <message>
         <location filename="../gui/SettingsView.qml" line="1651"/>
         <source>You can toggle this while streaming using Ctrl+Alt+Shift+U.</source>
         <translation>Можна перемкнути під час трансляції, натиснувши Ctrl+Alt+Shift+U.</translation>
@@ -1252,11 +1242,6 @@ Show/hide host pointer
         <translation>Зберегти</translation>
     </message>
     <message>
-        <location filename="../gui/SettingsView.qml" line="2443"/>
-        <source>keymap.xml path: %1</source>
-        <translation>Шлях до keymap.xml: %1</translation>
-    </message>
-    <message>
         <location filename="../gui/SettingsView.qml" line="1123"/>
         <source>Enable HDR</source>
         <translation>HDR</translation>
@@ -1478,6 +1463,16 @@ Show/hide host pointer
         <location filename="../gui/SettingsView.qml" line="1274"/>
         <source>This will close the app or game you are streaming when you end your stream. You will lose any unsaved progress!</source>
         <translation>Це закриє програму або гру, яку ви транслюєте, після завершення трансляції. Ви втратите весь незбережений прогрес!</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="1642"/>
+        <source>Enable custom keyboard combos</source>
+        <translation>Власні комбінації клавіш</translation>
+    </message>
+    <message>
+        <location filename="../gui/SettingsView.qml" line="1650"/>
+        <source>Allows Moonlight to intercept configured key combinations and substitute custom outputs.</source>
+        <translation>Дозволяє Moonlight перехоплювати налаштовані комбінації клавіш і підставляти замість них власні.</translation>
     </message>
     <message>
         <location filename="../gui/SettingsView.qml" line="1878"/>
