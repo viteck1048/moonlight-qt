@@ -108,7 +108,7 @@ adds the `-I` globally). If you see missing `libavcodec/...` headers, fix pkg-co
 Fork-only files, no upstream counterparts (no merge conflicts expected):
 - `.github/workflows/release-fork.yml` — push a tag `v<upstream>-keymap.<n>` (e.g. `v6.2.0-keymap.1`)
   to build Windows (setup .exe + portable zips, x64/arm64), AppImage, `.rpm` (Fedora 44) and `.deb`
-  (Ubuntu 24.04), and attach them to a **draft** GitHub release. Pushing branch `release-ci` runs the
+  (Ubuntu 24.04 and Debian 13), and attach them to a **draft** GitHub release. Pushing branch `release-ci` runs the
   builds without creating a release.
 - `packaging/rpm/moonlight-qt-keymap.spec`, `packaging/deb/build-deb.sh`.
 

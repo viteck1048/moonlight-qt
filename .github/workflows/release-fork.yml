@@ -165,16 +165,45 @@ jobs:
             libva-dev libvdpau-dev libdrm-dev libwayland-dev libx11-dev libplacebo-dev libvulkan-dev
 
       - name: Build DEB
-        run: packaging/deb/build-deb.sh "${{ needs.setup.outputs.version }}" dist
+        run: packaging/deb/build-deb.sh "${{ needs.setup.outputs.version }}~ubuntu24.04" dist
 
       - uses: actions/upload-artifact@v6
         with:
-          name: release-deb
+          name: release-deb-ubuntu
+          path: dist/*
+          if-no-files-found: error
+
+  build-deb-debian:
+    needs: setup
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y git build-essential dpkg-dev qmake6 qt6-base-dev qt6-base-private-dev qt6-declarative-dev libqt6svg6-dev \
+            libssl-dev libsdl2-dev libsdl2-ttf-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libopus-dev \
+            libva-dev libvdpau-dev libdrm-dev libwayland-dev libx11-dev libplacebo-dev libvulkan-dev
+
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          fetch-depth: 1
+
+      - name: Build DEB
+        run: |
+          git config --global --add safe.directory "$PWD"
+          packaging/deb/build-deb.sh "${{ needs.setup.outputs.version }}~deb13" dist
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: release-deb-debian
           path: dist/*
           if-no-files-found: error
 
   release:
-    needs: [setup, build-appimage, build-windows, build-rpm, build-deb]
+    needs: [setup, build-appimage, build-windows, build-rpm, build-deb, build-deb-debian]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
@@ -185,13 +214,18 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - name: Create draft release
+      # Re-pushing a tag (e.g. after a packaging fix) refreshes the files of an existing release
+      - name: Create or update draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           ls -la dist
-          gh release create "${GITHUB_REF_NAME}" dist/* \
-            --repo "${GITHUB_REPOSITORY}" \
-            --draft \
-            --title "Moonlight ${GITHUB_REF_NAME} (custom keymap fork)" \
-            --generate-notes
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist/* --repo "${GITHUB_REPOSITORY}" --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" dist/* \
+              --repo "${GITHUB_REPOSITORY}" \
+              --draft \
+              --title "Moonlight ${GITHUB_REF_NAME} (custom keymap fork)" \
+              --generate-notes
+          fi
